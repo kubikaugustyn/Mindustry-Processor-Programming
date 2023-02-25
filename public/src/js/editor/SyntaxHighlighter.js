@@ -1,11 +1,13 @@
 var __author__ = "kubik.augustyn@post.cz"
 
 class SyntaxHighlighter {
-    static LANG_MINDUSTRY = "Mindustry"
+    language
+    editorElements
+    highlightSyntax
 
-    constructor(language) {
+    constructor(language, highlightSyntax) {
         this.language = language
-
+        this.highlightSyntax = highlightSyntax?.bind?.(this)
         Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(method => (method !== 'constructor')).forEach((method) => {
             this[method] = this[method].bind(this);
         });
@@ -72,7 +74,6 @@ class SyntaxHighlighter {
         this.highlightSyntax(code)
     }
 
-
     sync_scroll(element) {
         /* Scroll result to scroll coords of event - sync with textarea */
         let result_element = this.editorElements.code//document.querySelector("#highlighting");
@@ -80,7 +81,6 @@ class SyntaxHighlighter {
         result_element.scrollTop = element.scrollTop;
         result_element.scrollLeft = element.scrollLeft;
     }
-
 
     check_tab(element, event) {
         let code = element.value;
@@ -96,32 +96,5 @@ class SyntaxHighlighter {
             element.selectionEnd = cursor_pos;
             this.update(element.value); // Update text to include indent
         }
-    }
-
-    highlightSyntax() {
-        console.log("Highlight!")
-        var tokens = [
-            new MINDUSTRY_TOKEN.IF_CHECK(
-                new MINDUSTRY_TOKEN.COMPARE_GRATER(
-                    new MINDUSTRY_TOKEN.VALUE_NUMBER(8),
-                    new MINDUSTRY_TOKEN.VALUE_NUMBER(2)
-                ),
-                new MINDUSTRY_TOKEN.MULTI_STATEMENT(
-                    new MINDUSTRY_TOKEN.OFFSET(1),
-                    new MINDUSTRY_TOKEN.COMPARE_GRATER(
-                        new MINDUSTRY_TOKEN.VALUE_NUMBER(12),
-                        new MINDUSTRY_TOKEN.VALUE_NUMBER(0)
-                    ),
-                    new MINDUSTRY_TOKEN.OFFSET(1),
-                    new MINDUSTRY_TOKEN.COMPARE_SMALLER(
-                        new MINDUSTRY_TOKEN.VALUE_NUMBER(179),
-                        new MINDUSTRY_TOKEN.VALUE_NUMBER(28)
-                    )
-                )
-            )
-        ]
-        this.editorElements.input.value = " "
-        this.editorElements.code.innerHTML = ""
-        tokens.forEach(token => this.editorElements.code.appendChild(Token.renderToken(token)))
     }
 }
