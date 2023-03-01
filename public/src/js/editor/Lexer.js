@@ -17,11 +17,19 @@ class Lexer {
 
         get next() {
             if (this.#i === this.#values.length) this.#done = true
+            if (this.#values[this.#i] === "\\" && !this.done) {
+                return this.#values[this.#i++].concat(this.next)
+            }
             return this.#values[this.#i++]
         }
 
         get done() {
             return this.#done
+        }
+
+        set undo(len) {
+            this.#i -= len
+            this.#done = this.#i === this.#values.length
         }
     }
 
@@ -40,7 +48,7 @@ class Lexer {
         this.currentChar = this.text.next
     }
 
-    *generateTokens() {
+    * generateTokens() {
 
     }
 }
