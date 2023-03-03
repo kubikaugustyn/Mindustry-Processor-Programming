@@ -5,6 +5,7 @@ class Token {
     subtype
     subtypeObject
     content
+    style
 
     /**
      * @param subtype {string}

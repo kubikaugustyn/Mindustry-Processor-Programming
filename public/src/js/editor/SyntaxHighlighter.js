@@ -76,7 +76,7 @@ class SyntaxHighlighter {
 
     sync_scroll(element) {
         /* Scroll result to scroll coords of event - sync with textarea */
-        let result_element = this.editorElements.code//document.querySelector("#highlighting");
+        let result_element = this.editorElements.pre//document.querySelector("#highlighting");
         // Get and set x and y
         result_element.scrollTop = element.scrollTop;
         result_element.scrollLeft = element.scrollLeft;

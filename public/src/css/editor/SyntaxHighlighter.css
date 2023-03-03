@@ -1,18 +1,10 @@
-.token.compare {
-    color: red;
+.highlighting code {
+    position: relative;
 }
 
-.token.value-number {
-    color: #09c;
-}
-
-.token.check-text {
-    color: #37f;
-}
-
-.token.offset {
-    --offset: 0;
-    margin-left: calc(var(--offset) * 40px);
+tab {
+    width: 22px;
+    display: inline-block;
 }
 
 

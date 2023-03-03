@@ -109,13 +109,21 @@ class MindustryLexer extends Lexer {
     static SET = "=";
     static COMMA = ",";
     static COMMENT = "#";
-    static MULTILINE_COMMENT = "*";
+    static MULTILINE_COMMENT = "*"
+    static KNOWN_PHRASES = [
+        "if", "else", "while", "for", "link", "of"
+    ]
+    static PARAM_PHRASE_PREFIX = "@";
 
     * generateTokens() {
+        var limit = 1000
+        var loopI = 0
         var num, i
-        while (!this.text.done) {
+        while (!this.text.done && loopI < limit) {
+            var foundToken = true
             if (MindustryLexer.SPACE.includes(this.currentChar)) {
                 num = this.getSpacesNum()
+                for (i = 0; i < num; i++) this.skipToken()
                 if (num % MindustryLexer.SPACE_TAB_SIZE === 0) {
                     for (i = 0; i < Math.floor(num / MindustryLexer.SPACE_TAB_SIZE); i++) {
                         yield new MindustryTokens.TAB
@@ -123,7 +131,14 @@ class MindustryLexer extends Lexer {
                 }
             } else if (MindustryLexer.TAB.includes(this.currentChar)) {
                 num = this.getTabsNum()
-                for (i = 0; i < num; i++) yield new MindustryTokens.TAB
+                for (i = 0; i < num; i++) {
+                    this.skipToken()
+                    yield new MindustryTokens.TAB
+                }
+            } else if (this.currentChar === MindustryLexer.SET) {
+                yield new MindustryTokens.SET()
+                this.nextToken()
+                this.advance()
             } else if (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar)) {
                 yield this.generateNumber()
             } else if (MindustryLexer.OPERATORS.map(op => op.startsWith(this.currentChar)).includes(true)) {
@@ -133,10 +148,14 @@ class MindustryLexer extends Lexer {
                     var nextCount = this.currentChar ? MindustryLexer.COUNT_OPERATORS(MindustryLexer.OPERATORS, operator + this.currentChar) : 0
                     if (nextCount === 0) {
                         operatorObject = MindustryLexer.OPERATORS.filter(op => op.chars === operator)[0]
-                        if (operatorObject) yield new MindustryTokens.OPERATOR(operatorObject?.type, "", operatorObject)
-                        else {
-                            this.text.undo = operator.length+1
+                        if (operatorObject) {
+                            this.nextToken()
+                            for (i = 0; i < operator.length - 1; i++) this.keepToken()
+                            yield new MindustryTokens.OPERATOR(operatorObject?.type, "", operatorObject)
+                        } else {
+                            this.text.undo(operator.length + 1)
                             this.advance()
+                            foundToken = false
                         }
                         break
                     } else if (this.currentChar) {
@@ -151,35 +170,46 @@ class MindustryLexer extends Lexer {
             } else if (MindustryLexer.PARENS.map(par => par.char === this.currentChar).includes(true)) {
                 var paren = MindustryLexer.PARENS.filter(par => par.char === this.currentChar)[0]
                 yield new MindustryTokens.PAREN(paren.type, "", paren)
+                this.nextToken()
                 this.advance()
             } else if (MindustryLexer.NEWLINE.includes(this.currentChar)) {
                 yield this.generateNewline()
-            } else if (MindustryLexer.STRINGS.includes(this.currentChar) || MindustryLexer.DYNAMIC_STRING === this.currentChar) {
+            } else if (MindustryLexer.STRINGS.includes(this.currentChar)) {
                 yield this.generateString()
-            } else if (this.currentChar === MindustryLexer.SET) {
-                yield new MindustryTokens.SET()
-                this.advance()
             } else if (this.currentChar === MindustryLexer.COMMA) {
                 yield new MindustryTokens.COMMA()
+                this.nextToken()
                 this.advance()
             } else if (this.currentChar === MindustryLexer.COMMENT) {
                 yield this.generateComment()
             } else {
-                var phrase = this.generateToSpaceOrToken()
+                foundToken = false
+            }
+            if (!foundToken) {
+                var [phrase, countSkip] = this.generateToSpaceOrToken()
                 if (!phrase) continue
                 var comma = false
                 if (phrase.endsWith(MindustryLexer.COMMA)) {
                     comma = true
                     phrase = phrase.slice(0, -1)
                 }
-                yield new MindustryTokens.PHRASE("", phrase)
-                if (comma) yield new MindustryTokens.COMMA()
+                if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield new MindustryTokens.PARAM_PHRASE("", phrase)
+                else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield new MindustryTokens.KNOWN_PHRASE("", phrase)
+                else yield new MindustryTokens.PHRASE("", phrase)
+                this.nextToken()
+                for (i = 0; i < phrase.length - 1; i++) this.keepToken()
+                if (comma) {
+                    yield new MindustryTokens.COMMA()
+                    this.nextToken()
+                }
+                for (i = 0; i < countSkip; i++) this.skipToken()
                 /*console.log(`'${this.currentChar}'`)
                 throw new class extends Error {
                     name = "MindustryLexerTokenError"
                     message = "No token was identified, error thrown to prevent infinite loop"
                 }*/
             }
+            loopI++
         }
     }
 
@@ -205,6 +235,7 @@ class MindustryLexer extends Lexer {
         var decimal_point_count = 0
         var number_str = this.currentChar
         this.advance()
+        this.nextToken()
 
         while (!this.text.done && (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar))) {
             if (this.currentChar === MindustryLexer.DIGITS_SEP) {
@@ -214,6 +245,7 @@ class MindustryLexer extends Lexer {
 
             number_str += this.currentChar
             this.advance()
+            this.keepToken()
         }
 
         if (number_str.startsWith(MindustryLexer.DIGITS_SEP)) number_str = MindustryLexer.DIGITS[0] + number_str
@@ -222,6 +254,7 @@ class MindustryLexer extends Lexer {
         var value = parseFloat(number_str)
         if (this.currentChar === MindustryLexer.DIGITS_POWER) { // 6.8E10 to 68000000000 (6.8 * 10^10)
             this.advance()
+            this.keepToken()
             var to_power_of_ten = Number(this.generateNumber().content)
             value = value * (10 ** to_power_of_ten)
         }
@@ -229,7 +262,10 @@ class MindustryLexer extends Lexer {
     }
 
     generateNewline() {
-        while (MindustryLexer.NEWLINE.includes(this.currentChar)) this.advance()
+        while (MindustryLexer.NEWLINE.includes(this.currentChar)) {
+            this.advance()
+            this.skipToken()
+        }
         return new MindustryTokens.NEWLINE
     }
 
@@ -237,9 +273,11 @@ class MindustryLexer extends Lexer {
         var beginning = this.currentChar
         var text = ''
         this.advance()
+        this.nextToken()
         var multiline = false
         if (this.currentChar === MindustryLexer.MULTILINE_STRING) {
             this.advance()
+            this.keepToken()
             beginning = this.currentChar
             multiline = true
         }
@@ -247,17 +285,21 @@ class MindustryLexer extends Lexer {
         while (!this.text.done) {
             if (this.currentChar === beginning && !multiline) {
                 this.advance()
+                this.keepToken()
                 break
             }
             if (this.currentChar === MindustryLexer.MULTILINE_STRING && !multiline) {
                 this.advance()
+                this.keepToken()
                 if (this.currentChar === beginning) {
                     this.advance()
+                    this.keepToken()
                     break
                 } else text += MindustryLexer.MULTILINE_STRING + this.currentChar
             } else text += this.currentChar
 
             this.advance()
+            this.keepToken()
         }
 
         return new MindustryTokens.VALUE("string", text)
@@ -266,25 +308,31 @@ class MindustryLexer extends Lexer {
     generateComment() {
         var comment = ''
         this.advance()
+        this.nextToken()
         var multiline
         if (this.currentChar === MindustryLexer.COMMENT) multiline = false
         else if (this.currentChar === MindustryLexer.MULTILINE_COMMENT) multiline = true
         else throw new Error(`Illegal '${this.currentChar}' after ${MindustryLexer.COMMENT} comment beginning`)
         this.advance()
+        this.keepToken()
 
         while (!this.text.done) {
             if (MindustryLexer.NEWLINE.includes(this.currentChar) && !multiline) {
                 this.advance()
+                this.keepToken()
                 break
             } else if (this.currentChar === MindustryLexer.MULTILINE_COMMENT && multiline) {
                 this.advance()
+                this.keepToken()
                 if (this.currentChar === MindustryLexer.COMMENT) {
                     this.advance()
+                    this.keepToken()
                     break
                 } else comment += MindustryLexer.MULTILINE_COMMENT + this.currentChar
             } else comment += this.currentChar
 
             this.advance()
+            this.keepToken()
         }
 
         return new MindustryTokens.COMMENT("", comment)
@@ -295,11 +343,12 @@ class MindustryLexer extends Lexer {
         this.advance()
 
         while (!this.text.done && !MindustryLexer.SPACE.includes(this.currentChar) && !MindustryLexer.NEWLINE.includes(this.currentChar) && !MindustryLexer.PARENS.map(par => par.char === this.currentChar).includes(true)) {
+            console.log(`'${this.currentChar}'`)
             text += this.currentChar
             this.advance()
         }
 
-        this.getSpacesNum()
-        return text
+        var num = this.getSpacesNum()
+        return [text, num]
     }
 }
