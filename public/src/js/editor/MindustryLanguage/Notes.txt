@@ -1,0 +1,149 @@
+draw clear 0 0 0
+draw color 0 0 0 255
+draw col 0
+draw stroke 0
+draw line 0 0 0 0
+draw rect 0 0 0 0
+draw lineRect 0 0 0 0
+draw poly 0 0 0 0 0
+draw linePoly 0 0 0 0 0
+draw triangle 0 0 0 0 0 0
+draw image 0 0 @copper 32 0
+-->
+draw(clear, 0, 0, 0)
+draw(color, 0, 0, 0, 255)
+etc.
+
+
+read result cell1 0
+write result cell1 0
+-->
+result = read(cell1, 0)
+write(cell1, 0, result)
+
+
+print "Hello"
+-->
+print("Hello")
+
+
+drawflush display1
+printflush message1
+getlink result 0
+-->
+drawflush(display1)
+printflush(message1)
+result = getlink(0)
+
+
+control enabled block1 0 0 0 0
+control shoot block1 0 0 0 0
+control shootp block1 0 0 0 0
+control config block1 0 0 0 0
+control color block1 0 0 0 0
+-->
+control(enabled, block1, 0)
+control(shoot, block1, 0, 0, 0)
+control(shootp, block1, 0, 0)
+control(config, block1, 0)
+control(color, block1, 0)
+
+
+radar enemy any any distance turret1 1 result
+-->
+result = radar(turret1, enemy, any, any, 1, distance)
+
+
+sensor result block1 @copper
+-->
+result = @copper of block1
+
+
+set result 0
+op add result a b
+lookup block result 0
+lookup unit result 0
+lookup item result 0
+lookup liquid result 0
+packcolor result 1 0 0 1
+-->
+result = 0
+result = a + b
+result = lookup(block, 0)
+result = lookup(unit, 0)
+result = lookup(item, 0)
+result = lookup(liquid, 0)
+result = packcolor(1, 0, 0, 1)
+
+
+wait 0.5
+stop
+end
+jump -1 equal x false
+jump -1 notEqual x false
+jump -1 lessThan x false
+jump -1 lessThanEq x false
+jump -1 greaterThan x false
+jump -1 greaterThanEq x false
+jump -1 strictEqual x false
+jump -1 always x false
+-->
+wait(0.5)
+stop
+end
+jump(5, x equal false)
+jump(5, x notEqual false)
+jump(5, x lessThan false)
+jump(5, x lessThanEq false)
+jump(5, x greaterThan false)
+jump(5, x greaterThanEq false)
+jump(5, x strictEqual false)
+jump(5)
+
+
+ubind @poly
+ucontrol idle 0 0 0 0 0
+ucontrol stop 0 0 0 0 0
+ucontrol move 0 0 0 0 0
+ucontrol approach 0 0 0 0 0
+ucontrol boost 0 0 0 0 0
+ucontrol target 0 0 0 0 0
+ucontrol targetp 0 0 0 0 0
+ucontrol itemDrop 0 0 0 0 0
+ucontrol itemTake 0 0 0 0 0
+ucontrol payDrop 0 0 0 0 0
+ucontrol payTake 0 0 0 0 0
+ucontrol payEnter 0 0 0 0 0
+ucontrol mine 0 0 0 0 0
+ucontrol flag 0 0 0 0 0
+ucontrol build 0 0 0 0 0
+ucontrol getBlock 0 0 0 0 0
+ucontrol within 0 0 0 0 0
+ucontrol unbind 0 0 0 0 0
+uradar enemy any any distance 0 1 result
+ulocate building core true @copper outx outy found building
+-->
+ubind(@poly)
+ucontrol(idle)
+ucontrol(stop)
+ucontrol(move, 0, 0)
+ucontrol(approach, 0, 0, 5)
+ucontrol(boost, 0)
+ucontrol(target, 0, 0, 0)
+ucontrol(targetp, 0, 0)
+ucontrol(itemDrop, 0, 0)
+ucontrol(itemTake, 0, 0, 0)
+ucontrol(payDrop)
+ucontrol(payTake, 0)
+ucontrol(payEnter)
+ucontrol(mine, 0, 0)
+ucontrol(flag, 0)
+ucontrol(build, 0, 0, @copper-wall, 0, 0)
+type, building, floor = ucontrol(getBlock, 0, 0)
+ucontrol(within, 0, 0, 0, result)
+ucontrol(unbind)
+result = uradar(enemy, any, any, distance)
+outX, outY, found = ulocate(ore, @copper)
+outX, outY, found, building = ulocate(building, core, true)
+outX, outY, found, building = ulocate(spawn)
+outX, outY, found, building = ulocate(damaged)

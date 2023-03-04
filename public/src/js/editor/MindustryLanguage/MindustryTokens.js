@@ -6,8 +6,13 @@ class MindustryTokens {
     }
     static VALUE = class extends Token {
         type = "value"
-        style = {
-            color: "blue"
+        subtypeStyle = {
+            "string": {
+                color: "lightgreen"
+            },
+            "*": {
+                color: "blue"
+            }
         }
     }
     static OPERATOR = class extends Token {
@@ -51,6 +56,12 @@ class MindustryTokens {
         type = "param-phrase"
         style = {
             color: "green"
+        }
+    }
+    static LINK_PHRASE = class extends Token {
+        type = "link-phrase"
+        style = {
+            color: "gray"
         }
     }
 }

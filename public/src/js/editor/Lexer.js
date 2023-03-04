@@ -82,7 +82,7 @@ class Lexer {
     }
 
     skipToken() {
-        console.warn("Skip token")
+        // console.warn("Skip token")
         this.tokenText.add("*")
     }
 

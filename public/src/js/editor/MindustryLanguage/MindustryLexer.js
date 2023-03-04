@@ -106,19 +106,35 @@ class MindustryLexer extends Lexer {
         new MindustryLexer.OPERATOR("acos", "arc-cosine", false),
         new MindustryLexer.OPERATOR("atan", "arc-tangent", false)
     ]
+    static BOOLEAN = ["true", "false"]
     static SET = "=";
     static COMMA = ",";
     static COMMENT = "#";
     static MULTILINE_COMMENT = "*"
     static KNOWN_PHRASES = [
-        "if", "else", "while", "for", "link", "of"
+        "if", "else", "while", "for",
+        "read", "write",
+        "draw", "clear", "color", "col", "stroke", "line", "rect", "lineRect", "poly", "linePoly", "triangle", "image",
+        "print",
+        "drawflush", "printflush", "getlink",
+        "control", "enabled", "shoot", "shootp", "config", "color",
+        "radar", "any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground", "distance", "health", "shield", "armor", "maxHealth",
+        "of",
+        "lookup", "block", "unit", "item", "liquid",
+        "packcolor",
+        "wait", "stop", "end",
+        "jump",
+        "ubind",
+        "ucontrol", "idle", "stop", "move", "approach", "boost", "target", "targetp", "itemDrop", "itemTake", "payDrop", "payTake", "payEnter", "mine", "flag", "build", "getBlock", "within", "unbind",
+        "uradar", "any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground", "distance", "health", "shield", "armor", "maxHealth",
+        "ulocate", "ore", "building", "spawn", "damaged"
     ]
     static PARAM_PHRASE_PREFIX = "@";
 
     * generateTokens() {
-        var limit = 1000
+        var limit = 10000
         var loopI = 0
-        var num, i
+        var num, i, operator, phrase, countSkip
         while (!this.text.done && loopI < limit) {
             var foundToken = true
             if (MindustryLexer.SPACE.includes(this.currentChar)) {
@@ -135,38 +151,31 @@ class MindustryLexer extends Lexer {
                     this.skipToken()
                     yield new MindustryTokens.TAB
                 }
+            } else if (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar)) {
+                yield this.generateNumber()
+            } else if (MindustryLexer.OPERATORS.map(op => op.startsWith(this.currentChar)).includes(true)) {
+                [operator, countSkip] = this.generateToSpaceOrToken()
+                var operatorObject = MindustryLexer.OPERATORS.filter(op => op.chars === operator)[0]
+                if (operatorObject) {
+                    this.nextToken()
+                    for (i = 0; i < operator.length - 1; i++) this.keepToken()
+                    for (i = 0; i < countSkip; i++) this.skipToken()
+                    yield new MindustryTokens.OPERATOR(operatorObject?.type, "", operatorObject)
+                } else {
+                    if (operator === MindustryLexer.SET) {
+                        yield new MindustryTokens.SET()
+                        this.nextToken()
+                        for (i = 0; i < countSkip; i++) this.skipToken()
+                    } else {
+                        this.text.undo(operator.length + 1 + countSkip)
+                        this.advance()
+                        foundToken = false
+                    }
+                }
             } else if (this.currentChar === MindustryLexer.SET) {
                 yield new MindustryTokens.SET()
                 this.nextToken()
                 this.advance()
-            } else if (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar)) {
-                yield this.generateNumber()
-            } else if (MindustryLexer.OPERATORS.map(op => op.startsWith(this.currentChar)).includes(true)) {
-                var operator = this.currentChar, operatorObject
-                while (!this.text.done) {
-                    this.advance()
-                    var nextCount = this.currentChar ? MindustryLexer.COUNT_OPERATORS(MindustryLexer.OPERATORS, operator + this.currentChar) : 0
-                    if (nextCount === 0) {
-                        operatorObject = MindustryLexer.OPERATORS.filter(op => op.chars === operator)[0]
-                        if (operatorObject) {
-                            this.nextToken()
-                            for (i = 0; i < operator.length - 1; i++) this.keepToken()
-                            yield new MindustryTokens.OPERATOR(operatorObject?.type, "", operatorObject)
-                        } else {
-                            this.text.undo(operator.length + 1)
-                            this.advance()
-                            foundToken = false
-                        }
-                        break
-                    } else if (this.currentChar) {
-                        operator += this.currentChar
-                    } else {
-                        console.log("Ran out of characters!")
-                        operatorObject = MindustryLexer.OPERATORS.filter(op => op.chars === operator)[0]
-                        yield new MindustryTokens.OPERATOR(operatorObject?.type, "", operatorObject)
-                        break
-                    }
-                }
             } else if (MindustryLexer.PARENS.map(par => par.char === this.currentChar).includes(true)) {
                 var paren = MindustryLexer.PARENS.filter(par => par.char === this.currentChar)[0]
                 yield new MindustryTokens.PAREN(paren.type, "", paren)
@@ -186,7 +195,7 @@ class MindustryLexer extends Lexer {
                 foundToken = false
             }
             if (!foundToken) {
-                var [phrase, countSkip] = this.generateToSpaceOrToken()
+                [phrase, countSkip] = this.generateToSpaceOrToken()
                 if (!phrase) continue
                 var comma = false
                 if (phrase.endsWith(MindustryLexer.COMMA)) {
@@ -194,7 +203,9 @@ class MindustryLexer extends Lexer {
                     phrase = phrase.slice(0, -1)
                 }
                 if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield new MindustryTokens.PARAM_PHRASE("", phrase)
+                else if (MindustryLexer.BOOLEAN.includes(phrase)) yield new MindustryTokens.VALUE("boolean", phrase)
                 else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield new MindustryTokens.KNOWN_PHRASE("", phrase)
+                else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield new MindustryTokens.LINK_PHRASE("", phrase)
                 else yield new MindustryTokens.PHRASE("", phrase)
                 this.nextToken()
                 for (i = 0; i < phrase.length - 1; i++) this.keepToken()
@@ -343,7 +354,7 @@ class MindustryLexer extends Lexer {
         this.advance()
 
         while (!this.text.done && !MindustryLexer.SPACE.includes(this.currentChar) && !MindustryLexer.NEWLINE.includes(this.currentChar) && !MindustryLexer.PARENS.map(par => par.char === this.currentChar).includes(true)) {
-            console.log(`'${this.currentChar}'`)
+            // console.log(`'${this.currentChar}'`)
             text += this.currentChar
             this.advance()
         }
