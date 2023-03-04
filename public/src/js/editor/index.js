@@ -60,6 +60,12 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
             // console.log(`${cmd} '${srcText}'`, currentSpan, currentToken)
             this.editorElements.code.style.removeProperty("color")
         }
+
+        var parser = new MindustryParser(tokens)
+        var tree = parser.parse()
+        if (tree) {
+            console.log(tree)
+        }
     } catch (e) {
         console.warn(e)
         this.editorElements.code.style.color = "red"

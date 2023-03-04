@@ -36,9 +36,9 @@ class MindustryLexer extends Lexer {
         new MindustryLexer.PAREN("(", "left-paren"),
         new MindustryLexer.PAREN(")", "right-paren", false),
         new MindustryLexer.PAREN("[", "left-bracket"),
-        new MindustryLexer.PAREN("]", "left-bracket", false),
+        new MindustryLexer.PAREN("]", "right-bracket", false),
         new MindustryLexer.PAREN("{", "left-brace"),
-        new MindustryLexer.PAREN("}", "left-brace", false),
+        new MindustryLexer.PAREN("}", "right-brace", false),
     ]
     static OPERATOR = class Operator {
         /**
