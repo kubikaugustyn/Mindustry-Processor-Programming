@@ -9,6 +9,15 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
         var tokensGenerator = lexer.generateTokens()
         var tokens = []
         for (let token of tokensGenerator) tokens.push(token)
+
+        var parser = new MindustryParser(tokens)
+        var [newTokens, tree] = parser.parse()
+        if (tree) {
+            console.log(tree)
+        }
+        console.log(newTokens)
+        tokens = newTokens
+
         /*console.log(tokens.map(token => {
             if (token.type === "newline") return "\n"
             return token.toString()
@@ -60,12 +69,6 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
             // console.log(`${cmd} '${srcText}'`, currentSpan, currentToken)
             this.editorElements.code.style.removeProperty("color")
         }
-
-        var parser = new MindustryParser(tokens)
-        var tree = parser.parse()
-        if (tree) {
-            console.log(tree)
-        }
     } catch (e) {
         console.warn(e)
         this.editorElements.code.style.color = "red"
@@ -81,46 +84,46 @@ if (a > 8){
 \tb = rand 9
 \tc = a max b
 }
-d = link c
+d = getlink(c)
 e = @maxItems of d
 
 result = read(cell1, 0)
 write(cell1, 0, result)
-draw(clear, 0, 0, 0)
-draw(color, 0, 0, 0, 255)
-draw(col, 0)
-draw(stroke, 0)
-draw(line, 0, 0, 0, 0)
-draw(rect, 0, 0, 0, 0)
-draw(lineRect, 0, 0, 0, 0)
-draw(poly, 0, 0, 0, 0, 0)
-draw(linePoly, 0, 0, 0, 0, 0)
-draw(triangle, 0, 0, 0, 0, 0, 0)
-draw(image, 0, 0, @copper, 32, 0)
+draw.clear(0, 0, 0)
+draw.color(0, 0, 0, 255)
+draw.col(0)
+draw.stroke(0)
+draw.line(0, 0, 0, 0)
+draw.rect(0, 0, 0, 0)
+draw.lineRect(0, 0, 0, 0)
+draw.poly(0, 0, 0, 0, 0)
+draw.linePoly(0, 0, 0, 0, 0)
+draw.triangle(0, 0, 0, 0, 0, 0)
+draw.image(0, 0, @copper, 32, 0)
 print("Hello world")
 
 drawflush(display1)
 printflush(message1)
 result = getlink(0)
-control(enabled, block1, 0)
-control(shoot, block1, 0, 0, 0)
-control(shootp, block1, 0, 0)
-control(config, block1, 0)
-control(color, block1, 0)
+control.enabled(block1, 0)
+control.shoot(block1, 0, 0, 0)
+control.shootp(block1, 0, 0)
+control.config(block1, 0)
+control.color(block1, 0)
 result = radar(turret1, enemy, any, any, 1, distance)
 result = @copper of block1
 
 result = 0
 result = a + b
-result = lookup(block, 0)
-result = lookup(unit, 0)
-result = lookup(item, 0)
-result = lookup(liquid, 0)
+result = lookup.block(0)
+result = lookup.unit(0)
+result = lookup.item(0)
+result = lookup.liquid(0)
 result = packcolor(0, 0, 0, 1)
 
 wait(0.5)
-stop
-end
+stop()
+end()
 jump(5, x == false)
 jump(5, x not false)
 jump(5, x < false)
@@ -131,27 +134,29 @@ jump(5, x === false)
 jump(5)
 
 ubind(@poly)
-ucontrol(idle)
-ucontrol(stop)
-ucontrol(move, 0, 0)
-ucontrol(approach, 0, 0, 5)
-ucontrol(boost, 0)
-ucontrol(target, 0, 0, 0)
-ucontrol(targetp, 0, 0)
-ucontrol(itemDrop, 0, 0)
-ucontrol(itemTake, 0, 0, 0)
-ucontrol(payDrop)
-ucontrol(payTake, 0)
-ucontrol(payEnter)
-ucontrol(mine, 0, 0)
-ucontrol(flag, 0)
-ucontrol(build, 0, 0, @copper-wall, 0, 0)
-type, building, floor = ucontrol(getBlock, 0, 0)
-ucontrol(within, 0, 0, 0, result)
-ucontrol(unbind)
+ucontrol.idle()
+ucontrol.stop()
+ucontrol.move(0, 0)
+ucontrol.approach(0, 0, 5)
+ucontrol.boost(0)
+ucontrol.target(0, 0, 0)
+ucontrol.targetp(0, 0)
+ucontrol.itemDrop(0, 0)
+ucontrol.itemTake(0, 0, 0)
+ucontrol.payDrop()
+ucontrol.payTake(0)
+ucontrol.payEnter()
+## dropped = ucontrol.payEnterIfIn(<radius>, <x>, <y>) - Suggested by [UR] TyT|xexebe#1178
+dropped = ucontrol.payEnterIfIn(5, a, b)
+ucontrol.mine(0, 0)
+ucontrol.flag(0)
+ucontrol.build(0, 0, @copper-wall, 0, 0)
+type, building, floor = ucontrol.getBlock(0, 0)
+result = ucontrol.within(0, 0, 0)
+ucontrol.unbind()
 result = uradar(enemy, any, any, distance)
-outX, outY, found = ulocate(ore, @copper)
-outX, outY, found, building = ulocate(building, core, true)
-outX, outY, found, building = ulocate(spawn)
-outX, outY, found, building = ulocate(damaged)`
+outX, outY, found = ulocate.ore(@copper)
+outX, outY, found, building = ulocate.building(core, true)
+outX, outY, found, building = ulocate.spawn()
+outX, outY, found, building = ulocate.damaged()`
 highlighter.highlightSyntax()

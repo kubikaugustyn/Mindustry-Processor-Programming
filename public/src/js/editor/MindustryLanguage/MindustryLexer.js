@@ -112,22 +112,22 @@ class MindustryLexer extends Lexer {
     static COMMENT = "#";
     static MULTILINE_COMMENT = "*"
     static KNOWN_PHRASES = [
-        "if", "else", "while", "for",
+        "if", "else", "elif", "while", "for",
         "read", "write",
-        "draw", "clear", "color", "col", "stroke", "line", "rect", "lineRect", "poly", "linePoly", "triangle", "image",
+        "draw.clear", "draw.color", "draw.col", "draw.stroke", "draw.line", "draw.rect", "draw.lineRect", "draw.poly", "draw.linePoly", "draw.triangle", "draw.image",
         "print",
         "drawflush", "printflush", "getlink",
-        "control", "enabled", "shoot", "shootp", "config", "color",
+        "control.enabled", "control.shoot", "control.shootp", "control.config", "control.color",
         "radar", "any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground", "distance", "health", "shield", "armor", "maxHealth",
         "of",
-        "lookup", "block", "unit", "item", "liquid",
+        "lookup.block", "lookup.unit", "lookup.item", "lookup.liquid",
         "packcolor",
         "wait", "stop", "end",
         "jump",
         "ubind",
-        "ucontrol", "idle", "stop", "move", "approach", "boost", "target", "targetp", "itemDrop", "itemTake", "payDrop", "payTake", "payEnter", "mine", "flag", "build", "getBlock", "within", "unbind",
+        "ucontrol.idle", "ucontrol.stop", "ucontrol.move", "ucontrol.approach", "ucontrol.boost", "ucontrol.target", "ucontrol.targetp", "ucontrol.itemDrop", "ucontrol.itemTake", "ucontrol.payDrop", "ucontrol.payTake", "ucontrol.payEnter", "ucontrol.payEnterIfIn", "ucontrol.mine", "ucontrol.flag", "ucontrol.build", "ucontrol.getBlock", "ucontrol.within", "ucontrol.unbind",
         "uradar", "any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground", "distance", "health", "shield", "armor", "maxHealth",
-        "ulocate", "ore", "building", "spawn", "damaged"
+        "ulocate.ore", "ulocate.building", "ulocate.spawn", "ulocate.damaged"
     ]
     static PARAM_PHRASE_PREFIX = "@";
 
