@@ -52,6 +52,14 @@ class ProcessorType {
      * @type {Array<ProcessorTypeValueRule>|undefined}
      */
     rules
+
+    /**
+     * @param other {ProcessorType}
+     * @returns {boolean}
+     */
+    equals(other) {
+        return this.constructor === other.constructor
+    }
 }
 
 class ProcessorTypes {

@@ -1,6 +1,12 @@
 var __author__ = "kubik.augustyn@post.cz"
 
 class MindustryTokens {
+    static DUMMY = class extends Token { // Just a token to replace tokens when grouping tokens together
+        // E.g. <PHRASE><PAREN_PAIR><PAREN_PAIR> --> <FUNCTION_CALL><DUMMY><DUMMY>
+        // Because of our syntax highlighting algorithm
+        type = "dummy"
+        style = "copy"
+    }
     static TAB = class extends Token {
         type = "tab"
     }
@@ -46,10 +52,35 @@ class MindustryTokens {
             color: "cyan"
         }
     }
-    static KNOWN_PHRASE = class extends Token {
+    /*static KNOWN_PHRASE = class extends Token {
         type = "known-phrase"
         style = {
             color: "magenta"
+        }
+    }*/
+    static FUNCTION_CALL_PHRASE = class extends Token {
+        type = "function-call-phrase"
+        subtypeStyle = {
+            "invalid": {color: "red"},
+            "*": {color: "magenta"}
+        }
+    }
+    static STATEMENT_PHRASE = class extends Token {
+        type = "statement-phrase"
+        style = {
+            color: "rgb(0, 49, 180)"
+        }
+    }
+    static VARIABLE_PHRASE = class extends Token {
+        type = "variable-phrase"
+        subtypeStyle = {
+            "invalid-reassignment": {"text-decoration": "underline", "text-decoration-color": "blue"},
+            "invalid-not-assigned": {
+                "text-decoration": "underline",
+                "text-decoration-style": "wavy",
+                "text-decoration-color": "red"
+            },
+            "*": {color: "rgb(36, 143, 143)"}
         }
     }
     static PARAM_PHRASE = class extends Token {

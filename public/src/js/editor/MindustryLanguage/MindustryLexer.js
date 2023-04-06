@@ -18,7 +18,7 @@ class MindustryLexer extends Lexer {
          */
         char
         /**
-         * @type {string}
+         * @type {string} Warning, type must be same for opening and closing parens
          */
         type
         /**
@@ -33,12 +33,12 @@ class MindustryLexer extends Lexer {
         }
     }
     static PARENS = [// Character considered parens
-        new MindustryLexer.PAREN("(", "left-paren"),
-        new MindustryLexer.PAREN(")", "right-paren", false),
-        new MindustryLexer.PAREN("[", "left-bracket"),
-        new MindustryLexer.PAREN("]", "right-bracket", false),
-        new MindustryLexer.PAREN("{", "left-brace"),
-        new MindustryLexer.PAREN("}", "right-brace", false),
+        new MindustryLexer.PAREN("(", "paren"),
+        new MindustryLexer.PAREN(")", "paren", false),
+        new MindustryLexer.PAREN("[", "bracket"),
+        new MindustryLexer.PAREN("]", "bracket", false),
+        new MindustryLexer.PAREN("{", "brace"),
+        new MindustryLexer.PAREN("}", "brace", false),
     ]
     static OPERATOR = class Operator {
         /**
@@ -104,14 +104,15 @@ class MindustryLexer extends Lexer {
         new MindustryLexer.OPERATOR("tan", "tangent", false),
         new MindustryLexer.OPERATOR("asn", "arc-sine", false),
         new MindustryLexer.OPERATOR("acos", "arc-cosine", false),
-        new MindustryLexer.OPERATOR("atan", "arc-tangent", false)
+        new MindustryLexer.OPERATOR("atan", "arc-tangent", false),
+        new MindustryLexer.OPERATOR("of", "of") // Custom, @maxItems of smelter1
     ]
     static BOOLEAN = ["true", "false"]
     static SET = "=";
     static COMMA = ",";
     static COMMENT = "#";
     static MULTILINE_COMMENT = "*"
-    static KNOWN_PHRASES = [
+    /*static KNOWN_PHRASES = [
         "if", "else", "elif", "while", "for",
         "read", "write",
         "draw.clear", "draw.color", "draw.col", "draw.stroke", "draw.line", "draw.rect", "draw.lineRect", "draw.poly", "draw.linePoly", "draw.triangle", "draw.image",
@@ -128,7 +129,7 @@ class MindustryLexer extends Lexer {
         "ucontrol.idle", "ucontrol.stop", "ucontrol.move", "ucontrol.approach", "ucontrol.boost", "ucontrol.target", "ucontrol.targetp", "ucontrol.itemDrop", "ucontrol.itemTake", "ucontrol.payDrop", "ucontrol.payTake", "ucontrol.payEnter", "ucontrol.payEnterIfIn", "ucontrol.mine", "ucontrol.flag", "ucontrol.build", "ucontrol.getBlock", "ucontrol.within", "ucontrol.unbind",
         "uradar", "any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground", "distance", "health", "shield", "armor", "maxHealth",
         "ulocate.ore", "ulocate.building", "ulocate.spawn", "ulocate.damaged"
-    ]
+    ]*/
     static PARAM_PHRASE_PREFIX = "@";
 
     * generateTokens() {
@@ -204,7 +205,7 @@ class MindustryLexer extends Lexer {
                 }
                 if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield new MindustryTokens.PARAM_PHRASE("", phrase)
                 else if (MindustryLexer.BOOLEAN.includes(phrase)) yield new MindustryTokens.VALUE("boolean", phrase)
-                else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield new MindustryTokens.KNOWN_PHRASE("", phrase)
+                // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield new MindustryTokens.KNOWN_PHRASE("", phrase)
                 else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield new MindustryTokens.LINK_PHRASE("", phrase)
                 else yield new MindustryTokens.PHRASE("", phrase)
                 this.nextToken()

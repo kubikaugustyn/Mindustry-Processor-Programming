@@ -27,17 +27,27 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
         lexer.tokenText.reset()
         var currentSpan = undefined
         var currentToken = undefined
-        var tokensCopy = tokens.filter(a => !(a instanceof MindustryTokens.TAB || a instanceof MindustryTokens.NEWLINE))
+        var currentTokenIndex = 0
+        var tokensFiltered = tokens.filter(a => !(a instanceof MindustryTokens.TAB || a instanceof MindustryTokens.NEWLINE))
         this.editorElements.code.innerHTML = ""
+        var srcText, cmd, property, value, style
         while (!lexer.text.almostDone && !lexer.tokenText.almostDone) {
-            var srcText = lexer.text.next
-            var cmd = lexer.tokenText.next
+            srcText = lexer.text.next
+            cmd = lexer.tokenText.next
             switch (cmd) {
                 case "+":
-                    currentToken = tokensCopy.shift()
+                    currentToken = tokensFiltered[currentTokenIndex++]
                     currentSpan = document.createElement("span")
-                    if (currentToken.style) for (var [property, value] of Object.entries(currentToken.style)) currentSpan.style.setProperty(property, value)
-                    if (currentToken.subtypeStyle) {
+                    if (currentToken?.style) {
+                        style = currentToken.style
+                        var i = 1
+                        while (style === "copy") {
+                            style = tokensFiltered[currentTokenIndex - i]?.style
+                            i++
+                        }
+                        if (style) for ([property, value] of Object.entries(style)) currentSpan.style.setProperty(property, value)
+                    }
+                    if (currentToken?.subtypeStyle) {
                         var subtypeStyle = currentToken.subtypeStyle[currentToken.subtype] || currentToken.subtypeStyle["*"]
                         for (var [subtypeProperty, subtypeValue] of Object.entries(subtypeStyle)) currentSpan.style.setProperty(subtypeProperty, subtypeValue)
                     }
@@ -79,6 +89,7 @@ var editor = highlighter.getEditor()
 document.body.appendChild(editor)
 editor.style.height = "300px"
 highlighter.editorElements.input.value = `a = rand 9
+c = 0 ## Default value
 if (a > 8){
 \ta = 8
 \tb = rand 9
@@ -88,10 +99,11 @@ d = getlink(c)
 e = @maxItems of d
 
 result = read(cell1, 0)
+##draw.clear() = read(cell1, 0) ## Temporary
 write(cell1, 0, result)
 draw.clear(0, 0, 0)
 draw.color(0, 0, 0, 255)
-draw.col(0)
+#*draw.col(0)
 draw.stroke(0)
 draw.line(0, 0, 0, 0)
 draw.rect(0, 0, 0, 0)
@@ -158,5 +170,5 @@ result = uradar(enemy, any, any, distance)
 outX, outY, found = ulocate.ore(@copper)
 outX, outY, found, building = ulocate.building(core, true)
 outX, outY, found, building = ulocate.spawn()
-outX, outY, found, building = ulocate.damaged()`
+outX, outY, found, building = ulocate.damaged()*#`
 highlighter.highlightSyntax()

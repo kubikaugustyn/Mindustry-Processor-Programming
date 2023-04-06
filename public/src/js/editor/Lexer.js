@@ -2,6 +2,9 @@ var __author__ = "kubik.augustyn@post.cz"
 
 class Lexer {
     static StringIterator = class StringIterator {
+        /**
+         * @type {string[]}
+         */
         #values = []
         #i = 0
         #done = false

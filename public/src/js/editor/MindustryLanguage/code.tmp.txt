@@ -1,0 +1,73 @@
+macro maxCountFlare(itemName, maxC)
+    if itemName == "silicon" maxC = 15
+endmacro
+macro maxCountMono(itemName, maxC)
+    if itemName == "silicon" maxC = 30
+    if itemName == "lead" maxC = 15
+endmacro
+
+macro maxCountT1(name, itemName, maxC)
+    if item == "flare" maxC = maxCountFlare itemName maxC
+    if item == "mono" maxC = maxCountMono itemName maxC
+endmacro
+macro maxCountT2(name, itemName, maxC)
+    if itemName == "silicon" maxC = 40
+    if itemName == "graphite" maxC = 40
+endmacro
+macro maxCountT3(name, itemName, maxC)
+    if itemName == "silicon" maxC = 130
+    if itemName == "titanium" maxC = 80
+    if itemName == "metaglass" maxC = 40
+endmacro
+
+macro maxCount(build, itemName, maxC)
+    type = build.@config
+    name = type.@name
+    block = build.@type
+    blockName = block.@name
+    if blockName == "air-factory" maxCountT1 name itemName maxC
+    if blockName == "additive-reconstructor" maxCountT2 name itemName maxC
+    if blockName == "multiplicative-reconstructor" maxCountT3 name itemName maxC
+endmacro
+macro calculateNeeded(build, item, targetCount, needed)
+    currentCount = build.item
+    maxC = 0
+    itemName = item.@name
+    maxCount build itemName maxC
+    deltaCount = maxC - currentCount
+    printflush message1 build " - " item " - " deltaCount
+    wait 1
+endmacro
+
+Start: 
+memX = 311
+memY = 150
+ubind @flare
+if @unit == null jump Start
+L2: 
+ucontrol approach memX memY 5
+ucontrol within memX memY 5 close
+if close == null jump L2
+ucontrol getBlock memX memY type mem _
+name = type.@name
+if name == "memory-cell" jump HasCell
+end
+HasCell:
+ucontrol unbind
+# Do the deliver requests
+itemI = 0
+loop:
+lookup item item itemI
+if item == null jump almostEnd
+itemNeeded = 0
+i = 0
+loop1:
+getlink build i
+needed = 0
+calculateNeeded build item itemNeeded needed
+i += 1
+if i < 7 jump loop1
+itemI += 1
+jump loop
+almostEnd:
+if mem != null jump HasCell
