@@ -145,14 +145,16 @@ class MindustryParser extends Parser {
             new MindustryParser.FUNCTION_ARGUMENT("G", "G value of the RGB color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("B", "B value of the RGB color", ProcessorTypes.COLOR)
         ]),
-        new MindustryParser.FUNCTION([], "draw.color", "Sets the draw color", [
+        new MindustryParser.FUNCTION([], "draw.color", "Sets the draw color to RGBA value", [
             new MindustryParser.FUNCTION_ARGUMENT("R", "R value of the RGBA color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("G", "G value of the RGBA color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("B", "B value of the RGBA color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("A", "A value of the RGBA color", ProcessorTypes.COLOR)
         ]),
-        /*new MindustryParser.FUNCTION([], "draw.col", [[ProcessorTypes.POSITIVE_INTEGER]]),
-        new MindustryParser.FUNCTION([], "draw.stroke", [[ProcessorTypes.POSITIVE_INTEGER]]),
+        new MindustryParser.FUNCTION([], "draw.col", "Sets the draw color", [
+            new MindustryParser.FUNCTION_ARGUMENT("color", "Value of the color", ProcessorTypes.POSITIVE_INTEGER),
+        ]),
+        /*new MindustryParser.FUNCTION([], "draw.stroke", [[ProcessorTypes.POSITIVE_INTEGER]]),
         new MindustryParser.FUNCTION([], "draw.line", [[ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER]]),
         new MindustryParser.FUNCTION([], "draw.rect", [[ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER]]),
         new MindustryParser.FUNCTION([], "draw.lineRect", [[ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER]]),
@@ -228,12 +230,12 @@ class MindustryParser extends Parser {
 
         if (!result) this.throwError()
 
-        /*this.loopThroughParens(result, (old, i, whole) => {
+        /*MindustryParser.loopThroughParens(result, (old, i, whole) => {
             console.log(old, i)
             if (old instanceof MindustryTokens.OPERATOR) return new MindustryTokens.DUMMY()
             return old
         })*/
-        this.loopThroughParens(result, (old, i, whole, variables) => {
+        MindustryParser.loopThroughParens(result, (old, i, whole, variables) => {
             if (old instanceof MindustryTokens.PHRASE) {
                 var iOfSet = whole.indexOf(whole.slice(i + 1).find(tok => tok instanceof MindustryTokens.SET))
                 var iOfNL = whole.indexOf(whole.slice(i + 1).find(tok => tok instanceof MindustryTokens.NEWLINE))
@@ -253,7 +255,7 @@ class MindustryParser extends Parser {
             }
             return old
         })
-        this.loopThroughParens(result, (old, i, whole, variables) => {
+        MindustryParser.loopThroughParens(result, (old, i, whole, variables) => {
             if (old instanceof MindustryTokens.PHRASE) {
                 if (whole.length && whole[i + 1] instanceof MindustryParser.PAREN_PAIR) {
                     if (MindustryParser.STATEMENT_PHRASES.includes(old.content)) {
@@ -306,7 +308,7 @@ class MindustryParser extends Parser {
      * @param parenPair {MindustryParser.ParenPair}
      * @param callbackFn {(value: Token, index: number, array: Token[], variables: ProcessorVariables) => Token}
      */
-    loopThroughParens(parenPair, callbackFn) {
+    static loopThroughParens(parenPair, callbackFn) {
         if (!callbackFn) return
         /**
          * @type {MindustryParser.ParenPair}

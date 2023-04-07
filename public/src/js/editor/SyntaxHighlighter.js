@@ -78,8 +78,9 @@ class SyntaxHighlighter {
         /* Scroll result to scroll coords of event - sync with textarea */
         let result_element = this.editorElements.pre//document.querySelector("#highlighting");
         // Get and set x and y
-        result_element.scrollTop = element.scrollTop;
-        result_element.scrollLeft = element.scrollLeft;
+        // result_element.scrollTop = element.scrollTop;
+        // result_element.scrollLeft = element.scrollLeft;
+        result_element.style.transform = `translate(${-element.scrollLeft}px, ${-element.scrollTop}px)`
     }
 
     check_tab(element, event) {

@@ -1,0 +1,23 @@
+.split-screen {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+.split-screen .left {
+    float: left;
+    height: 100%;
+    width: 50%;
+}
+
+.split-screen .right {
+    height: 100%;
+}
+
+.split-screen .clear {
+    clear: both;
+    height: 1px;
+    overflow: hidden;
+    font-size: 0;
+    margin-top: -1px;
+}

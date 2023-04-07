@@ -1,0 +1,93 @@
+.processor-block.category-input-output {
+    --categoryColor: rgb(160, 138, 138);
+}
+
+.processor-block.category-block-control {
+    --categoryColor: rgb(212, 129, 107);
+}
+
+.processor-block.category-operations {
+    --categoryColor: rgb(135, 123, 173);
+}
+
+.processor-block.category-flow-control {
+    --categoryColor: rgb(107, 178, 178);
+}
+
+.processor-block.category-unit-control {
+    --categoryColor: rgb(199, 181, 157);
+}
+
+.processor-block, .processor-block * {
+    --scale: .5;
+}
+
+.processor-block {
+    --categoryColor: rgb(0, 0, 0);
+    margin: calc(var(--scale) * 20px);
+    border: calc(var(--scale) * 10px) solid var(--categoryColor);
+    background-color: black;
+}
+
+.processor-block * {
+    font-family: "Varela Round";
+}
+
+.processor-block .headline {
+    width: calc(100% - calc(var(--scale) * 20px));
+    height: calc(var(--scale) * 50px);
+    padding: calc(var(--scale) * 10px);
+    background-color: var(--categoryColor);
+    display: table;
+}
+
+.processor-block .headline span {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.processor-block .headline span.title {
+    font-size: calc(var(--scale) * 30px);
+    color: var(--categoryColor);
+    -webkit-text-stroke: 1px black;
+}
+
+.processor-block .headline span.index {
+    font-size: calc(var(--scale) * 30px);
+    color: var(--categoryColor);
+    -webkit-text-stroke: 1px black;
+    float: right;
+}
+
+.processor-block .content {
+    padding: calc(var(--scale) * 10px);
+    font-size: calc(var(--scale) * 30px);
+    /*width: calc(100% - calc(var(--scale) * 40px));*/
+    /*min-height: 100px;*/
+    background-color: black;
+    color: white;
+    /*border-color: var(--categoryColor);*/
+    /*border-style: solid;*/
+    /*border-width: calc(var(--scale) * 10px);*/
+    /*border-top-width: 0;*/
+    display: table;
+    width: fit-content;
+}
+
+.processor-block .content * {
+    display: table-cell;
+    vertical-align: middle;
+    padding-left: calc(var(--scale) * 5px);
+    padding-right: calc(var(--scale) * 5px);
+}
+
+.processor-block .content span.param {
+    font-size: calc(var(--scale) * 30px);
+    border-bottom-color: var(--categoryColor);
+    border-top-color: transparent;
+    border-style: solid;
+    border-width: 0;
+    border-top-width: calc(var(--scale) * 7px);
+    border-bottom-width: calc(var(--scale) * 7px);
+    min-width: calc(var(--scale) * 250px);
+}

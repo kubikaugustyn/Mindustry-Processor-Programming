@@ -53,7 +53,7 @@ class Parser {
     tokens
 
     throwError(msg) {
-        throw new Error("Invalid syntax" + (msg ? ": ".concat(msg) : ""))
+        throw new SyntaxError("Invalid syntax" + (msg ? ": ".concat(msg) : ""))
     }
 
     constructor(tokens) {

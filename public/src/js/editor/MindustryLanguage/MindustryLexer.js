@@ -4,6 +4,9 @@ class MindustryLexer extends Lexer {
     // Characters considered digits of number
     // Fist has value 0, third value 2 etc.
     static DIGITS = "0123456789"
+    static HEX_DIGITS = "0123456789abcdef"
+    static HEX_ANNOTATION = "0x" // 0xff
+    static COLOR_ANNOTATION = "%" // %00ff00ff
     static DIGITS_SEP = "." // 5.2
     static DIGITS_POWER = "E" // 6.8E10 to 68000000000 (6.8 * 10^10)
     static SPACE = " " // Character considered space
@@ -154,6 +157,8 @@ class MindustryLexer extends Lexer {
                 }
             } else if (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar)) {
                 yield this.generateNumber()
+            } else if (this.currentChar === MindustryLexer.COLOR_ANNOTATION) {
+                yield this.generateColor()
             } else if (MindustryLexer.OPERATORS.map(op => op.startsWith(this.currentChar)).includes(true)) {
                 [operator, countSkip] = this.generateToSpaceOrToken()
                 var operatorObject = MindustryLexer.OPERATORS.filter(op => op.chars === operator)[0]
@@ -246,10 +251,15 @@ class MindustryLexer extends Lexer {
     generateNumber() {
         var decimal_point_count = 0
         var number_str = this.currentChar
+        var isHex = false
         this.advance()
         this.nextToken()
 
-        while (!this.text.done && (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar))) {
+        while (!this.text.done && (
+            (isHex ? false : this.currentChar === MindustryLexer.DIGITS_SEP) ||
+            (isHex ? MindustryLexer.HEX_DIGITS : MindustryLexer.DIGITS).includes(this.currentChar) ||
+            (isHex ? false : this.currentChar === MindustryLexer.HEX_ANNOTATION[1])
+        )) {
             if (this.currentChar === MindustryLexer.DIGITS_SEP) {
                 decimal_point_count++
                 if (decimal_point_count > 1) break
@@ -258,19 +268,35 @@ class MindustryLexer extends Lexer {
             number_str += this.currentChar
             this.advance()
             this.keepToken()
+
+            if (number_str === MindustryLexer.HEX_ANNOTATION) isHex = true
         }
 
         if (number_str.startsWith(MindustryLexer.DIGITS_SEP)) number_str = MindustryLexer.DIGITS[0] + number_str
         if (number_str.endsWith(MindustryLexer.DIGITS_SEP)) number_str += MindustryLexer.DIGITS[0]
 
-        var value = parseFloat(number_str)
-        if (this.currentChar === MindustryLexer.DIGITS_POWER) { // 6.8E10 to 68000000000 (6.8 * 10^10)
+        var value = isHex ? number_str : parseFloat(number_str)
+        if (!isHex && this.currentChar === MindustryLexer.DIGITS_POWER) { // 6.8E10 to 68000000000 (6.8 * 10^10)
             this.advance()
             this.keepToken()
             var to_power_of_ten = Number(this.generateNumber().content)
             value = value * (10 ** to_power_of_ten)
         }
-        return new MindustryTokens.VALUE("number", value)
+        return new MindustryTokens.VALUE(isHex ? "hex-number" : "number", value)
+    }
+
+    generateColor() {
+        var color_str = this.currentChar
+        this.advance()
+        this.nextToken()
+
+        while (!this.text.done && MindustryLexer.HEX_DIGITS.includes(this.currentChar)) {
+            color_str += this.currentChar
+            this.advance()
+            this.keepToken()
+        }
+
+        return new MindustryTokens.VALUE((color_str.length === 9) ? "color" : "color-invalid", color_str)
     }
 
     generateNewline() {

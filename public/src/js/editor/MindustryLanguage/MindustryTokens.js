@@ -16,6 +16,18 @@ class MindustryTokens {
             "string": {
                 color: "lightgreen"
             },
+            "color": {
+                "background-image": "linear-gradient(to right, gray, red, red, green, green, blue, blue, gray, gray)",
+                "-webkit-background-clip": "text",
+                "-moz-background-clip": "text",
+                "background-clip": "text",
+                color: "transparent"
+            },
+            "color-invalid": {
+                "text-decoration": "underline",
+                "text-decoration-style": "wavy",
+                "text-decoration-color": "red"
+            },
             "*": {
                 color: "blue"
             }

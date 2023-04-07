@@ -10,7 +10,7 @@ class Token {
 
     /**
      * @param subtype {string}
-     * @param content {string}
+     * @param content {any}
      * @param subtypeObject {any}
      */
     constructor(subtype = "", content = "", subtypeObject = undefined) {

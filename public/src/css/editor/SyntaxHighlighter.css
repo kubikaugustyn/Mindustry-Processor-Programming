@@ -15,9 +15,9 @@ tab {
     margin: 10px;
     padding: 10px;
     border: 0;
-    width: calc(100% - 32px);
+    width: calc(50vw - 40px);
     /*height: 150px;*/
-    height: calc(100% - 32px);
+    height: calc(100vh - 40px);
 }
 
 .editing, .highlighting, .highlighting * {
@@ -45,21 +45,25 @@ tab {
 
 .highlighting {
     z-index: 0;
+    overflow: visible;
 }
 
 
 /* Make textarea almost completely transparent */
 
 .editing {
+    position: relative;
     color: transparent;
     background: transparent;
     caret-color: black; /* Or choose your favourite color */
+    overflow: auto;
 }
 
 /* Can be scrolled */
 .editing, .highlighting {
-    overflow: auto;
+    /*overflow: auto;*/
     white-space: nowrap; /* Allows textarea to scroll horizontally */
+    position: absolute;
 }
 
 /* No resize on textarea */

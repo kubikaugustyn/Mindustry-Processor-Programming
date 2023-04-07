@@ -1,5 +1,7 @@
 var __author__ = "kubik.augustyn@post.cz"
 
+var blocksView = new ProcessorBlocksView()
+
 var highlighter = new SyntaxHighlighter("Mindustry", function () {
     // this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
     // this.editorElements.code.style.color = "blue"
@@ -14,6 +16,12 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
         var [newTokens, tree] = parser.parse()
         if (tree) {
             console.log(tree)
+            var compiler = new MindustryCompiler(tree)
+            var processorBlocks = compiler.compile()
+            if (processorBlocks) {
+                console.log(processorBlocks)
+                blocksView.setBlocks(processorBlocks)
+            }
         }
         console.log(newTokens)
         tokens = newTokens
@@ -85,9 +93,12 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
         this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
     }
 })
+document.body.classList.add("split-screen")
 var editor = highlighter.getEditor()
+// editor.innerHTML = "LEFT"
+editor.classList.add("left")
 document.body.appendChild(editor)
-editor.style.height = "300px"
+// editor.style.height = "300px"
 highlighter.editorElements.input.value = `a = rand 9
 c = 0 ## Default value
 if (a > 8){
@@ -103,8 +114,10 @@ result = read(cell1, 0)
 write(cell1, 0, result)
 draw.clear(0, 0, 0)
 draw.color(0, 0, 0, 255)
-#*draw.col(0)
-draw.stroke(0)
+draw.col(0)
+f = 0xff
+draw.col(%00ff00ff) ## %RRGGBBAA (hexadecimal)
+#*draw.stroke(0)
 draw.line(0, 0, 0, 0)
 draw.rect(0, 0, 0, 0)
 draw.lineRect(0, 0, 0, 0)
@@ -171,4 +184,26 @@ outX, outY, found = ulocate.ore(@copper)
 outX, outY, found, building = ulocate.building(core, true)
 outX, outY, found, building = ulocate.spawn()
 outX, outY, found, building = ulocate.damaged()*#`
+var blocksViewContainer = blocksView.getContainer()
+// blocksViewContainer.innerHTML = "RIGHT"
+blocksViewContainer.classList.add("right")
+document.body.appendChild(blocksViewContainer)
+
+var clearDiv = document.createElement("div")
+clearDiv.classList.add("clear")
+document.body.appendChild(clearDiv)
+
 highlighter.highlightSyntax()
+/*
+read result cell1 0
+op add result result 1
+write result cell1 0
+*/
+blocksView.setBlocks([
+    new ProcessorTokens.READ(["result", "cell1", "0"]),
+    new ProcessorTokens.PRINT(['"Result: "']),
+    new ProcessorTokens.PRINT(["result"]),
+    new ProcessorTokens.PRINT_FLUSH(["message1"]),
+    new ProcessorTokens.OPERATION(["add", "result", "result", "1"]),
+    new ProcessorTokens.WRITE(["result", "cell1", "0"])
+])

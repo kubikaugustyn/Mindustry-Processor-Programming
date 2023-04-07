@@ -9,6 +9,10 @@ class Lexer {
         #i = 0
         #done = false
         #almostDone = false
+        /**
+         * @type {string}
+         */
+        currentChar
 
         constructor(string) {
             this.add(string)
@@ -26,7 +30,7 @@ class Lexer {
             if (this.#values[this.#i] === "\\" && !this.done) {
                 return this.#values[this.#i++].concat(this.next)
             }
-            return this.#values[this.#i++]
+            return this.currentChar = this.#values[this.#i++]
         }
 
         get done() {
