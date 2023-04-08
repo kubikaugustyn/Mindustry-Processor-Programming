@@ -1,3 +1,25 @@
+.processor-blocks {
+    margin: 10px;
+}
+
+.processor-blocks textarea {
+    display: none;
+}
+
+.processor-blocks button {
+    height: 30px;
+}
+
+.processor-blocks button::before {
+    content: "Copy to clipboard";
+}
+
+.processor-blocks .container {
+    overflow-y: scroll;
+    height: calc(100% - 35px);
+    margin-top: 5px;
+}
+
 .processor-block.category-input-output {
     --categoryColor: rgb(160, 138, 138);
 }

@@ -4,16 +4,22 @@ class SyntaxHighlighter {
     language
     editorElements
     highlightSyntax
+    rawSyntax
+    highlightOnKeyUp = null
 
-    constructor(language, highlightSyntax) {
+    constructor(language, highlightSyntax, rawSyntax) {
         this.language = language
         this.highlightSyntax = highlightSyntax?.bind?.(this)
+        this.rawSyntax = rawSyntax?.bind?.(this)
         Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(method => (method !== 'constructor')).forEach((method) => {
             this[method] = this[method].bind(this);
         });
 
         this.editor = document.createElement("div")
         this.editorElements = new function (highlighter) {
+            var lineNumbers = this.lineNumbers = document.createElement("div")
+            lineNumbers.classList.add("line-numbers")
+
             var inp = this.input = document.createElement("textarea")
             // inp.placeholder = `Enter ${highlighter.language} Source Code`
             inp.placeholder = `Enter Code`
@@ -23,6 +29,7 @@ class SyntaxHighlighter {
             inp.addEventListener("input", highlighter.onInput)
             inp.addEventListener("scroll", highlighter.onScroll)
             inp.addEventListener("keydown", highlighter.onKeyDown)
+            inp.addEventListener("keyup", highlighter.onKeyUp)
 
             var pre = this.pre = document.createElement("pre")
             pre.ariaHidden = true
@@ -31,6 +38,7 @@ class SyntaxHighlighter {
             var code = this.code = document.createElement("code")
 
             highlighter.editor.appendChild(inp)
+            pre.appendChild(lineNumbers)
             pre.appendChild(code)
             highlighter.editor.appendChild(pre)
         }(this)
@@ -63,6 +71,12 @@ class SyntaxHighlighter {
         this.check_tab(this.editorElements.input, ev)
     }
 
+    onKeyUp() {
+        if (!this.highlightOnKeyUp) return
+        this.highlightOnKeyUp = undefined
+        this.highlightSyntax(this.highlightOnKeyUp)
+    }
+
     update(text) {
         // Handle final newlines (see article)
         if (text[text.length - 1] === "\n") {
@@ -70,17 +84,28 @@ class SyntaxHighlighter {
         }
         // Update code
         var code = text.replaceAll(new RegExp("&", "g"), "&amp;").replaceAll(new RegExp("<", "g"), "&lt;"); /* Global RegExp */
+        // Show line numbers
+        var linesCountDelta = code.split("\n").length - this.editorElements.lineNumbers.childElementCount // How many to add = 5, how many to remove = -5
+        var i
+        if (linesCountDelta < 0) {
+            for (i = 0; i < (0 - linesCountDelta); i++) this.editorElements.lineNumbers.removeChild(this.editorElements.lineNumbers.lastChild)
+        } else {
+            for (i = 0; i < linesCountDelta; i++) this.editorElements.lineNumbers.appendChild(document.createElement("span"))
+        }
         // Syntax Highlight
-        this.highlightSyntax(code)
+        this.highlightOnKeyUp = code
+        this.rawSyntax(code)
     }
 
     sync_scroll(element) {
         /* Scroll result to scroll coords of event - sync with textarea */
-        let result_element = this.editorElements.pre//document.querySelector("#highlighting");
         // Get and set x and y
         // result_element.scrollTop = element.scrollTop;
         // result_element.scrollLeft = element.scrollLeft;
-        result_element.style.transform = `translate(${-element.scrollLeft}px, ${-element.scrollTop}px)`
+        var lineNumbersWidth = Math.floor(this.editorElements.lineNumbers.getBoundingClientRect().width)
+        this.editor.style.setProperty("--lineNumbersWidth", lineNumbersWidth + "px")
+        this.editorElements.code.style.transform = `translate(${-element.scrollLeft}px, ${-element.scrollTop}px)`
+        this.editorElements.lineNumbers.style.transform = `translate(${-element.scrollLeft - lineNumbersWidth - 10}px, ${-element.scrollTop}px)`
     }
 
     check_tab(element, event) {

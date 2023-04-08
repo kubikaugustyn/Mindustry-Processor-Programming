@@ -1,5 +1,10 @@
+body {
+    --lineNumbersWidth: 20px;
+}
+
 .highlighting code {
-    position: relative;
+    position: absolute;
+    overflow: visible;
 }
 
 tab {
@@ -7,15 +12,33 @@ tab {
     display: inline-block;
 }
 
+.line-numbers {
+    line-height: 20pt;
+    width: fit-content;
+    text-align: right;
+    overflow: hidden;
+    position: absolute;
+}
+
+.line-numbers span {
+    overflow: visible;
+    counter-increment: linenumber;
+}
+
+.line-numbers span::before {
+    content: counter(linenumber);
+    display: block;
+    color: #506882;
+}
 
 /* Please see the article */
 
 .editing, .highlighting {
     /* Both elements need the same text and space styling so they are directly on top of each other */
     margin: 10px;
-    padding: 10px;
+    padding: 10px 10px 10px calc(var(--lineNumbersWidth) + 15px);
     border: 0;
-    width: calc(50vw - 40px);
+    width: calc(50vw - 45px - var(--lineNumbersWidth));
     /*height: 150px;*/
     height: calc(100vh - 40px);
 }
@@ -45,7 +68,7 @@ tab {
 
 .highlighting {
     z-index: 0;
-    overflow: visible;
+    overflow: hidden;
 }
 
 

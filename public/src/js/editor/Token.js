@@ -13,9 +13,9 @@ class Token {
      * @param content {any}
      * @param subtypeObject {any}
      */
-    constructor(subtype = "", content = "", subtypeObject = undefined) {
+    constructor(subtype = "", content = undefined, subtypeObject = undefined) {
         subtype && (this.subtype = subtype)
-        content && (this.content = content)
+        typeof content !== "undefined" && (this.content = content)
         subtypeObject && (this.subtypeObject = subtypeObject)
 
         Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(method => (method !== 'constructor')).forEach((method) => {
@@ -29,5 +29,9 @@ class Token {
         if (this.subtype) str += (this.type === "default" ? "" : "_") + this.subtype
         if (this.content) str += (this.subtype === "" ? "'" : ":'") + this.content + "'"
         return str
+    }
+
+    represent() {
+        return this.content
     }
 }

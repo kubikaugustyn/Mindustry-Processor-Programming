@@ -5,11 +5,13 @@ class ProcessorTokens { // Basically all block available in processor
         category = ProcessorBlock.CATEGORY_INPUT_OUTPUT
         blockTitle = "Read"
         format = "read {0} = {1} at {2}"
+        command = "read"
     }
     static WRITE = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_INPUT_OUTPUT
         blockTitle = "Write"
         format = "write {0} to {1} at {2}"
+        command = "write"
     }
     static DRAW = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_INPUT_OUTPUT
@@ -27,27 +29,32 @@ class ProcessorTokens { // Basically all block available in processor
             [{0: "triangle"}, "triangle x {1} y {2} x2 {3} y2 {4} x3 {5} y3 {6}"],
             [{0: "image"}, "image x {1} y {2} image {3} size {4} rotation {5}"]
         ]
+        command = "draw"
     }
     static PRINT = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_INPUT_OUTPUT
         blockTitle = "Print"
         format = "{0}"
+        command = "print"
     }
 
     static DRAW_FLUSH = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_BLOCK_CONTROL
         blockTitle = "Draw Flush"
         format = "to {0}"
+        command = "drawflush"
     }
     static PRINT_FLUSH = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_BLOCK_CONTROL
         blockTitle = "Print Flush"
         format = "to {0}"
+        command = "printflush"
     }
     static GET_LINK = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_BLOCK_CONTROL
         blockTitle = "Get Link"
         format = "{0} = link# {1}"
+        command = "getlink"
     }
     static CONTROL = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_BLOCK_CONTROL
@@ -59,22 +66,26 @@ class ProcessorTokens { // Basically all block available in processor
             [{0: "config"}, "set {0} of {1} to {2}"],
             [{0: "color"}, "set {0} of {1} to {2}"]
         ]
+        command = "control"
     }
     static RADAR = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_BLOCK_CONTROL
         blockTitle = "Radar"
         format = "from {0} target {1} and {2} and {3} order {4} sort {5} output {6}"
+        command = "radar"
     }
     static SENSOR = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_BLOCK_CONTROL
         blockTitle = "Sensor"
         format = "{0} = {2} in {1}"
+        command = "sensor"
     }
 
     static SET = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_OPERATIONS
         blockTitle = "Set"
         format = "{0} = {1}"
+        command = "set"
     }
     static OPERATION = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_OPERATIONS
@@ -120,32 +131,38 @@ class ProcessorTokens { // Basically all block available in processor
             [{0: "acos"}, "{1} = acos {2}"],
             [{0: "atan"}, "{1} = atan {2}"],
         ]
+        command = "op"
     }
     static LOOKUP = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_OPERATIONS
         blockTitle = "Lookup"
         format = "{1} = lookup {0} # {2}"
+        command = "lookup"
     }
     static PACK_COLOR = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_OPERATIONS
         blockTitle = "Pack Color"
         format = "{0} = pack {1} {2} {3} {4}"
+        command = "packcolor"
     }
 
     static WAIT = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_FLOW_CONTROL
         blockTitle = "Wait"
         format = "{0} sec"
+        command = "wait"
     }
     static STOP = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_FLOW_CONTROL
         blockTitle = "Stop"
         format = ""
+        command = "stop"
     }
     static END = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_FLOW_CONTROL
         blockTitle = "End"
         format = ""
+        command = "end"
     }
     static JUMP = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_FLOW_CONTROL
@@ -160,26 +177,31 @@ class ProcessorTokens { // Basically all block available in processor
             [{1: "strictEq"}, "if {2} === {3}"],
             [{1: "always"}, "if always"]
         ]
+        command = "jump"
     }
 
     static UNIT_BIND = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_UNIT_CONTROL
         blockTitle = "Unit Bind"
         format = "type {0}"
+        command = "ubind"
     }
     static UNIT_CONTROL = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_UNIT_CONTROL
         blockTitle = "Unit Control"
         format = "[TODO]"
+        command = "ucontrol"
     }
     static UNIT_RADAR = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_UNIT_CONTROL
         blockTitle = "Unit Radar"
         format = "[TODO]"
+        command = "uradar"
     }
     static UNIT_LOCATE = class extends ProcessorBlock {
         category = ProcessorBlock.CATEGORY_UNIT_CONTROL
         blockTitle = "Unit Locate"
         format = "[TODO]"
+        command = "ulocate"
     }
 }

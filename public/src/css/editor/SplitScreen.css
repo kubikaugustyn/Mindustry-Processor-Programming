@@ -11,7 +11,9 @@
 }
 
 .split-screen .right {
+    float: right;
     height: 100%;
+    width: 50%;
 }
 
 .split-screen .clear {

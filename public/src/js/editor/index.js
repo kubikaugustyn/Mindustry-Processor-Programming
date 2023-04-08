@@ -23,7 +23,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
                 blocksView.setBlocks(processorBlocks)
             }
         }
-        console.log(newTokens)
+        // console.log(newTokens)
         tokens = newTokens
 
         /*console.log(tokens.map(token => {
@@ -92,6 +92,9 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
         this.editorElements.code.style.color = "red"
         this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
     }
+}, function (code) {
+    this.editorElements.code.innerHTML = code.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
+    this.editorElements.code.style.color = "blue"
 })
 document.body.classList.add("split-screen")
 var editor = highlighter.getEditor()
@@ -193,17 +196,21 @@ var clearDiv = document.createElement("div")
 clearDiv.classList.add("clear")
 document.body.appendChild(clearDiv)
 
-highlighter.highlightSyntax()
+highlighter.onInput()
+highlighter.onKeyUp()
 /*
 read result cell1 0
 op add result result 1
 write result cell1 0
 */
-blocksView.setBlocks([
+/*blocksView.setBlocks([
+    new ProcessorTokens.SET(["i", "0"]),
     new ProcessorTokens.READ(["result", "cell1", "0"]),
     new ProcessorTokens.PRINT(['"Result: "']),
     new ProcessorTokens.PRINT(["result"]),
     new ProcessorTokens.PRINT_FLUSH(["message1"]),
     new ProcessorTokens.OPERATION(["add", "result", "result", "1"]),
-    new ProcessorTokens.WRITE(["result", "cell1", "0"])
-])
+    new ProcessorTokens.WRITE(["result", "cell1", "0"]),
+    new ProcessorTokens.OPERATION(["add", "i", "i", "1"]),
+    new ProcessorTokens.JUMP(["1", "lessThan", "i", "10"])
+])*/

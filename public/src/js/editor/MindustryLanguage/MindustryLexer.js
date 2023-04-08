@@ -274,7 +274,6 @@ class MindustryLexer extends Lexer {
 
         if (number_str.startsWith(MindustryLexer.DIGITS_SEP)) number_str = MindustryLexer.DIGITS[0] + number_str
         if (number_str.endsWith(MindustryLexer.DIGITS_SEP)) number_str += MindustryLexer.DIGITS[0]
-
         var value = isHex ? number_str : parseFloat(number_str)
         if (!isHex && this.currentChar === MindustryLexer.DIGITS_POWER) { // 6.8E10 to 68000000000 (6.8 * 10^10)
             this.advance()

@@ -13,6 +13,7 @@ class ProcessorBlock extends Token {
     blockTitle = ""
     format = "[blank]" // "Hello {1}, {0}" (params: ["just test", "world"]) --> "Hello world, just test"
     // OR [[{1: "world"}, "Hello {1}, {0}"], [{}, "Failed"]] (params: ["just test", "world"]) --> "Hello world, just test" - Only if param 0 === "world"
+    command = "[blank command]"
 
     params
 
@@ -43,7 +44,7 @@ class ProcessorBlock extends Token {
                     if (this.params[i] !== value) return false
                 }
                 return true
-            })[1] || "[blank]"
+            })?.[1] || "[blank]"
         }
         var iter = new Lexer.StringIterator(format)
         var isParam = false
@@ -67,5 +68,9 @@ class ProcessorBlock extends Token {
             }
         }
         return formatted.map(a => a.startsWith("<") ? a : `<span>${a}</span>`).join("")
+    }
+
+    toString() {
+        return `${this.command} ${this.params.join(" ")}`
     }
 }

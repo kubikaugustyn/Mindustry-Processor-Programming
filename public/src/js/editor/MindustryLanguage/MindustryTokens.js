@@ -32,11 +32,26 @@ class MindustryTokens {
                 color: "blue"
             }
         }
+
+        represent() {
+            if (this.subtype === "hex-number") return this.content
+            if (this.subtype === "number") return MindustryCompiler.OBFUSCATE ? "0x" + this.content.toString(16) : this.content.toString()
+            return "[VALUE]"
+        }
     }
     static OPERATOR = class extends Token {
         type = "operator"
         style = {
             color: "magenta"
+        }
+        static subtypeToProcessorName = {
+            "random": "rand",
+            "maximum": "max"
+        }
+
+        represent() {
+            if (!Object.keys(MindustryTokens.OPERATOR.subtypeToProcessorName).includes(this.subtype)) return "[OPERATOR]"
+            return MindustryTokens.OPERATOR.subtypeToProcessorName[this.subtype]
         }
     }
     static PAREN = class extends Token {

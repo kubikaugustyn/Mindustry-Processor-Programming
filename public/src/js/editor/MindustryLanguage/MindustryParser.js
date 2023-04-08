@@ -239,16 +239,19 @@ class MindustryParser extends Parser {
             if (old instanceof MindustryTokens.PHRASE) {
                 var iOfSet = whole.indexOf(whole.slice(i + 1).find(tok => tok instanceof MindustryTokens.SET))
                 var iOfNL = whole.indexOf(whole.slice(i + 1).find(tok => tok instanceof MindustryTokens.NEWLINE))
-                if (iOfNL ? iOfSet < iOfNL : iOfSet > -1) {
-                    console.log("New variable:", old.content)
+                if ((iOfNL ? iOfSet < iOfNL : iOfSet > -1) && iOfSet > i) {
+                    // console.log("New variable:", old.content)
                     var variable = variables.getVariable(old.content)
                     var type = "???" // TODO Resolve this
                     var valid = true
                     if (variable) { // Check if variable type we're assigning to is the same as the type of what are we assigning
                         if (type !== "???") valid = type.equals(variable.type)
                     } else { // Create / Add the variable to our list
-                        variable = new ProcessorVariable(old.content, type)
-                        valid = variables.addVariable(variable)
+                        if (old.content.startsWith("tmp_")) valid = false
+                        else {
+                            variable = new ProcessorVariable(old.content, type)
+                            valid = variables.addVariable(variable)
+                        }
                     }
                     return new MindustryTokens.VARIABLE_PHRASE(valid ? "default-set" : "invalid-reassignment", old.content, variable)
                 }
@@ -257,21 +260,27 @@ class MindustryParser extends Parser {
         })
         MindustryParser.loopThroughParens(result, (old, i, whole, variables) => {
             if (old instanceof MindustryTokens.PHRASE) {
-                if (whole.length && whole[i + 1] instanceof MindustryParser.PAREN_PAIR) {
+                if (whole.length > i + 1 && whole[i + 1] instanceof MindustryParser.PAREN_PAIR) {
                     if (MindustryParser.STATEMENT_PHRASES.includes(old.content)) {
-                        if (whole.length > 1 && whole[i + 2] instanceof MindustryParser.PAREN_PAIR) {
-                            return new MindustryTokens.STATEMENT_PHRASE(old.content, old.content)
+                        if (whole.length > i + 2 && whole[i + 2] instanceof MindustryParser.PAREN_PAIR) {
+                            var statementCondition = whole[i + 1]
+                            var statementContent = whole[i + 2]
+                            whole[i + 1] = new MindustryTokens.DUMMY("unpack", statementCondition)
+                            whole[i + 2] = new MindustryTokens.DUMMY("unpack", statementContent)
+                            return new MindustryTokens.STATEMENT_PHRASE(old.content, statementContent, statementCondition)
                         }
                     } else {
                         // TODO Also make there check of inputs
                         var func = MindustryParser.FUNCTIONS.find(function (func) {
                             return func.functionName === old.content
                         })
-                        return new MindustryTokens.FUNCTION_CALL_PHRASE(func ? "default" : "invalid", old.content, func)
+                        var functionArgs = whole[i + 1]
+                        whole[i + 1] = new MindustryTokens.DUMMY("unpack", functionArgs)
+                        return new MindustryTokens.FUNCTION_CALL_PHRASE(func ? "default" : "invalid", [old.content, functionArgs], func)
                     }
                 } else {
                     var variable = variables.hasVariable(old.content)
-                    console.log(variable ? "default" : "invalid", old.content, variables.getVariable(old.content))
+                    // console.log(variable ? "default" : "invalid", old.content, variables.getVariable(old.content))
                     return new MindustryTokens.VARIABLE_PHRASE(variable ? "default-get" : "invalid-not-assigned", old.content, variable)
                 }
             }
@@ -289,14 +298,18 @@ class MindustryParser extends Parser {
             if (cont instanceof MindustryParser.PAREN_PAIR) {
                 allTokens.push(cont.openParenToken)
                 cont.parent = paren
-                console.log("Shift", paren, cont)
+                // console.log("Shift", paren, cont)
                 paren = cont.clone()
+            } else if (cont instanceof MindustryTokens.DUMMY && cont.subtype === "unpack") { // If some token has been replaced with dummy
+                // We'll add that to the paren contents
+                console.log("Unpack dummy:", cont, cont.content) // TODO Fix unpacking dummy
+                paren.contents.push(cont.content)
             } else if (cont) allTokens.push(cont)
-            console.log(cont)
+            // console.log(cont)
             if (!paren.contents.length) {
                 if (!paren.parent) break
                 allTokens.push(paren.closeParenToken)
-                console.log("Shift back", paren, paren.parent)
+                // console.log("Shift back", paren, paren.parent)
                 paren = paren.parent
             }
         }
