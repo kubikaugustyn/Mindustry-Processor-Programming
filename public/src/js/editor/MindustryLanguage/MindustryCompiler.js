@@ -41,7 +41,7 @@ class MindustryCompiler extends Compiler {
             while (loopI < limit) {
                 var cont = paren.contents[i++]
                 var toEndOrNewline = MindustryCompiler.toEndOrNewline(paren.contents.slice(i - 1))
-                console.log(toEndOrNewline)
+                // console.log(toEndOrNewline)
                 if (cont instanceof MindustryParser.PAREN_PAIR) {
                     paren.tmp_i = i
                     cont.parent = paren
@@ -55,8 +55,9 @@ class MindustryCompiler extends Compiler {
                 } else if (MindustryCompiler.instancesOf(toEndOrNewline, MindustryCompiler.VARIABLE_ASSIGNMENT)) {
                     var assignedVal = toEndOrNewline.slice(2)
                     var varName = toEndOrNewline[0].content
-                    console.log("Set variable", varName, "to", assignedVal, "(", toEndOrNewline, ")")
+                    // console.log("Set variable", varName, "to", assignedVal, "(", toEndOrNewline, ")")
                     if (MindustryCompiler.instancesOf(assignedVal, MindustryCompiler.VARIABLE_ASSIGNMENT_VALUE)) {
+                        console.log(assignedVal[0])
                         processorBlocks.push(new ProcessorTokens.SET([varName, assignedVal[0].represent()]))
                     } else if (MindustryCompiler.instancesOf(assignedVal, MindustryCompiler.VARIABLE_ASSIGNMENT_OPERATOR_1INP)) {
                         processorBlocks.push(new ProcessorTokens.OPERATION([assignedVal[0].represent(), varName, assignedVal[1].represent()]))
@@ -70,6 +71,7 @@ class MindustryCompiler extends Compiler {
                     i = 0
                 } else if ((i - 2) >= 0 && MindustryCompiler.instancesOf(MindustryCompiler.toEndOrNewline(paren.contents.slice(i - 2)), MindustryCompiler.FUNCTION_CALL)) { // Second appearance of function call (the dummy token)
                     var functionCall = paren.contents[i - 2]
+                    functionCall.content[1].contents = functionCall.content[1].contents.filter(arg => !(arg instanceof MindustryTokens.COMMA)).map(arg => arg.represent())
                     processorBlocks.push(...MindustryCompiler.functionCall(functionCall, functionCall.content[0], functionCall.content[1]))
                 }//else if (cont) console.log(cont)
                 while (i === paren.contents.length) {
@@ -111,13 +113,24 @@ class MindustryCompiler extends Compiler {
      * @param call {MindustryTokens.FUNCTION_CALL_PHRASE}
      * @param name {string}
      * @param args {MindustryParser.PAREN_PAIR}
+     * @param returnVars {ProcessorVariable[]}
+     * @returns {ProcessorBlock[]}
      */
-    static functionCall(call, name, args) {
+    static functionCall(call, name, args, returnVars) {
+        console.log("Call function:", name, call, args)
+        var functionClass = MindustryParser.FUNCTIONS.find(func => func.functionName === name)
+        if (!functionClass) return MindustryCompiler.OBFUSCATE ? [] : [new ProcessorTokens.PRINT(['"Unknown function"']), new ProcessorTokens.PRINT_FLUSH(["null"])]
         /**
          * @type {ProcessorBlock[]}
          */
-        var tokens = []
-        console.log("Call function:", name, call, args)
-        return tokens
+        var code = functionClass.code.map(instruction => instruction.clone())
+        for (var instruction of code) {
+            instruction.params = instruction.params.map(param => {
+                if (param.startsWith("return-")) return returnVars?.[parseInt(param.slice(7))]
+                if (param.startsWith("argument-")) return args.contents?.[parseInt(param.slice(9))]
+                return param
+            })
+        }
+        return code
     }
 }

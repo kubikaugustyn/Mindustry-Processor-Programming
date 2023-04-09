@@ -36,6 +36,8 @@ class MindustryTokens {
         represent() {
             if (this.subtype === "hex-number") return this.content
             if (this.subtype === "number") return MindustryCompiler.OBFUSCATE ? "0x" + this.content.toString(16) : this.content.toString()
+            if (this.subtype === "string") return '"' + this.content + '"'
+            if (this.subtype === "color") return this.content
             return "[VALUE]"
         }
     }

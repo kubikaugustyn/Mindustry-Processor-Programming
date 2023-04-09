@@ -104,6 +104,7 @@ document.body.appendChild(editor)
 // editor.style.height = "300px"
 highlighter.editorElements.input.value = `a = rand 9
 c = 0 ## Default value
+@counter = 7
 if (a > 8){
 \ta = 8
 \tb = rand 9

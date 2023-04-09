@@ -119,7 +119,7 @@ class ProcessorTypes {
     static COLOR_NUMBER = class extends ProcessorTypes.NUMBER {
         rules = [
             new ProcessorTypeValueRules.INTEGER(),
-            new ProcessorTypeValueRules.IN_RANGE(0, 0)
+            new ProcessorTypeValueRules.IN_RANGE(0, 0xFFFFFFFF)
         ]
     }
     static ITEMS_LIQUIDS_NUMBER = class extends ProcessorTypes.NUMBER {

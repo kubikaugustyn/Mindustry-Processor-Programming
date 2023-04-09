@@ -27,7 +27,7 @@ class Token {
         var str = ""
         if (this.type !== "default") str += this.type
         if (this.subtype) str += (this.type === "default" ? "" : "_") + this.subtype
-        if (this.content) str += (this.subtype === "" ? "'" : ":'") + this.content + "'"
+        if (typeof this.content !== "undefined") str += (this.subtype === "" ? "'" : ":'") + this.content + "'"
         return str
     }
 

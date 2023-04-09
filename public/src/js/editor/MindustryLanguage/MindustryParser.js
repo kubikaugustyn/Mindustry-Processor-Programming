@@ -113,46 +113,64 @@ class MindustryParser extends Parser {
          * @type {MindustryParser.FunctionArgument[]}
          */
         functionArguments
+        /**
+         * @type {ProcessorBlock[]}
+         */
+        code
 
         /**
          * @param returnTypes {ProcessorType[][]}
          * @param functionName {string}
          * @param functionDescription {string}
          * @param functionArguments {MindustryParser.FunctionArgument[]}
+         * @param code {ProcessorBlock[]}
          */
-        constructor(returnTypes, functionName, functionDescription, functionArguments) {
+        constructor(returnTypes, functionName, functionDescription, functionArguments, code) {
             this.returnTypes = returnTypes
             this.functionName = functionName
             this.functionDescription = functionDescription
             this.functionArguments = functionArguments
+            this.code = code
         }
     }
     static FUNCTIONS = [
         new MindustryParser.FUNCTION([[ProcessorTypes.BUILDING]], "getlink", "Get a processor link by index. Starts at 0.", [
             new MindustryParser.FUNCTION_ARGUMENT("link#", "Link index", ProcessorTypes.POSITIVE_INTEGER)
+        ], [
+            new ProcessorTokens.GET_LINK(["return-0", "argument-0"])
         ]),
         new MindustryParser.FUNCTION([[ProcessorTypes.INTEGER]], "read", "Read a number from a linked memory cell.", [
             new MindustryParser.FUNCTION_ARGUMENT("link", "Linked cell", ProcessorTypes.BUILDING),
             new MindustryParser.FUNCTION_ARGUMENT("address", "Memory address to read at / from", ProcessorTypes.POSITIVE_INTEGER)
+        ], [
+            new ProcessorTokens.READ(["return-0", "argument-0", "argument-1"])
         ]),
         new MindustryParser.FUNCTION([], "write", "Write a number to a linked memory cell", [
             new MindustryParser.FUNCTION_ARGUMENT("link", "Linked cell", ProcessorTypes.BUILDING),
             new MindustryParser.FUNCTION_ARGUMENT("address", "Memory address to write at / to", ProcessorTypes.POSITIVE_INTEGER),
             new MindustryParser.FUNCTION_ARGUMENT("number", "Number to store", ProcessorTypes.INTEGER)
+        ], [
+            new ProcessorTokens.WRITE(["argument-2", "argument-0", "argument-1"])
         ]),
         new MindustryParser.FUNCTION([], "draw.clear", "Clears / fills the canvas with color", [
             new MindustryParser.FUNCTION_ARGUMENT("R", "R value of the RGB color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("G", "G value of the RGB color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("B", "B value of the RGB color", ProcessorTypes.COLOR)
+        ], [
+            new ProcessorTokens.DRAW(["clear", "argument-0", "argument-1", "argument-2"])
         ]),
         new MindustryParser.FUNCTION([], "draw.color", "Sets the draw color to RGBA value", [
             new MindustryParser.FUNCTION_ARGUMENT("R", "R value of the RGBA color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("G", "G value of the RGBA color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("B", "B value of the RGBA color", ProcessorTypes.COLOR),
             new MindustryParser.FUNCTION_ARGUMENT("A", "A value of the RGBA color", ProcessorTypes.COLOR)
+        ], [
+            new ProcessorTokens.DRAW(["color", "argument-0", "argument-1", "argument-2", "argument-3"])
         ]),
         new MindustryParser.FUNCTION([], "draw.col", "Sets the draw color", [
-            new MindustryParser.FUNCTION_ARGUMENT("color", "Value of the color", ProcessorTypes.POSITIVE_INTEGER),
+            new MindustryParser.FUNCTION_ARGUMENT("color", "Value of the color", [ProcessorTypes.POSITIVE_INTEGER, ProcessorTypes.COLOR_NUMBER]),
+        ], [
+            new ProcessorTokens.DRAW(["col", "argument-0"])
         ]),
         /*new MindustryParser.FUNCTION([], "draw.stroke", [[ProcessorTypes.POSITIVE_INTEGER]]),
         new MindustryParser.FUNCTION([], "draw.line", [[ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER], [ProcessorTypes.POSITIVE_INTEGER]]),
@@ -236,7 +254,7 @@ class MindustryParser extends Parser {
             return old
         })*/
         MindustryParser.loopThroughParens(result, (old, i, whole, variables) => {
-            if (old instanceof MindustryTokens.PHRASE) {
+            if (old instanceof MindustryTokens.PHRASE || old instanceof MindustryTokens.PARAM_PHRASE) {
                 var iOfSet = whole.indexOf(whole.slice(i + 1).find(tok => tok instanceof MindustryTokens.SET))
                 var iOfNL = whole.indexOf(whole.slice(i + 1).find(tok => tok instanceof MindustryTokens.NEWLINE))
                 if ((iOfNL ? iOfSet < iOfNL : iOfSet > -1) && iOfSet > i) {
@@ -298,12 +316,11 @@ class MindustryParser extends Parser {
             if (cont instanceof MindustryParser.PAREN_PAIR) {
                 allTokens.push(cont.openParenToken)
                 cont.parent = paren
-                // console.log("Shift", paren, cont)
                 paren = cont.clone()
             } else if (cont instanceof MindustryTokens.DUMMY && cont.subtype === "unpack") { // If some token has been replaced with dummy
                 // We'll add that to the paren contents
-                console.log("Unpack dummy:", cont, cont.content) // TODO Fix unpacking dummy
-                paren.contents.push(cont.content)
+                paren.contents.unshift(cont.content)
+                continue
             } else if (cont) allTokens.push(cont)
             // console.log(cont)
             if (!paren.contents.length) {
@@ -336,6 +353,9 @@ class MindustryParser extends Parser {
         WholeLoop:
             while (loopI < limit) {
                 var cont = paren.contents[i++]
+                if (cont instanceof MindustryTokens.DUMMY && cont.subtype === "unpack") {
+                    cont = cont.content
+                }
                 if (cont instanceof MindustryParser.PAREN_PAIR) {
                     paren.tmp_i = i
                     cont.parent = paren

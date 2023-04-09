@@ -73,4 +73,13 @@ class ProcessorBlock extends Token {
     toString() {
         return `${this.command} ${this.params.join(" ")}`
     }
+
+    clone() {
+        var clone = new ProcessorBlock(this.params.slice())
+        clone.category = this.category
+        clone.blockTitle = this.blockTitle
+        clone.format = this.format
+        clone.command = this.command
+        return clone
+    }
 }
