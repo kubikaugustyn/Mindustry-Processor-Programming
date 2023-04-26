@@ -1,30 +1,33 @@
 var __author__ = "kubik.augustyn@post.cz"
 
 var blocksView = new ProcessorBlocksView()
+var lexer = new MindustryLexer()
+var parser = new MindustryParser()
+var compiler = new MindustryCompiler()
 
 var highlighter = new SyntaxHighlighter("Mindustry", function () {
     // this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
     // this.editorElements.code.style.color = "blue"
 
     try {
-        var lexer = new MindustryLexer(this.editorElements.input.value)
-        var tokensGenerator = lexer.generateTokens()
+        var tokensGenerator = lexer.regenerateTokens(this.editorElements.input.value)
         var tokens = []
         for (let token of tokensGenerator) tokens.push(token)
 
-        var parser = new MindustryParser(tokens)
-        var [newTokens, tree] = parser.parse()
+        // Parse (generate Abstract Syntax Tree)
+        var tree = parser.reparse(tokens.filter(token =>
+            !(token instanceof MindustryTokens.TAB || token instanceof MindustryTokens.COMMENT)
+        ))
         if (tree) {
             console.log(tree)
-            var compiler = new MindustryCompiler(tree)
-            var processorBlocks = compiler.compile()
+            // Compile (Abstract Syntax Tree --> list of ProcessorBlock)
+            var processorBlocks = compiler.recompile(tree)
             if (processorBlocks) {
-                console.log(processorBlocks)
+                // console.log(processorBlocks)
                 blocksView.setBlocks(processorBlocks)
             }
         }
         // console.log(newTokens)
-        tokens = newTokens
 
         /*console.log(tokens.map(token => {
             if (token.type === "newline") return "\n"
@@ -45,7 +48,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
             switch (cmd) {
                 case "+":
                     currentToken = tokensFiltered[currentTokenIndex++]
-                    currentSpan = document.createElement("span")
+                    currentSpan = document.createElement(currentToken.type === "comment" ? "pre" : "span")
                     if (currentToken?.style) {
                         style = currentToken.style
                         var i = 1
@@ -71,6 +74,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
                     currentSpan = undefined
                     currentToken = undefined
                     if (srcText === "\n") {
+                        // if (tokensFiltered[currentTokenIndex]?.type === "comment") break
                         this.editorElements.code.appendChild(document.createElement("br"))
                         break
                     } else if (srcText === "\t") {
@@ -188,6 +192,24 @@ outX, outY, found = ulocate.ore(@copper)
 outX, outY, found, building = ulocate.building(core, true)
 outX, outY, found, building = ulocate.spawn()
 outX, outY, found, building = ulocate.damaged()*#`
+highlighter.editorElements.input.value = `a = 8 xor 7
+#*AST should be:
+        SET
+      /     \\
+     a      XOR (OPERATION:XOR)
+           /   \\
+          8     7
+*#`
+highlighter.editorElements.input.value = `a = 8 xor (7 + 3)
+#*AST should be:
+        SET
+      /     \\
+     a      XOR (OPERATION:XOR)
+           /   \\
+          8     ADD (OPERATION:ADD)
+               /   \\
+              7     3
+*#`
 var blocksViewContainer = blocksView.getContainer()
 // blocksViewContainer.innerHTML = "RIGHT"
 blocksViewContainer.classList.add("right")

@@ -41,6 +41,76 @@ class Parser {
             this.#values.push(...array)
             this.undo(0)
         }
+
+        toArray() {
+            return this.#values.slice()
+        }
+    }
+
+    static ArrayBuffer = class ArrayBuffer {
+        static ALLOCATE_CHUNK = 5;
+        #length
+        #content
+
+        constructor() {
+            this.#content = new Array(ArrayBuffer.ALLOCATE_CHUNK)
+            this.reset()
+        }
+
+        add(item) {
+            if (this.#content.length <= this.#length) this.#content.length += ArrayBuffer.ALLOCATE_CHUNK
+            this.#content[this.#length++] = item
+        }
+
+        reset() {
+            this.#length = 0
+            this.#content.length = ArrayBuffer.ALLOCATE_CHUNK
+        }
+
+        item(i) {
+            if (i >= this.#length) return
+            return this.#content[i]
+        }
+
+        get items() {
+            return this.#content.slice(0, this.#length)
+        }
+    }
+
+    static AtomicValue = class AtomicValue {
+        #content
+
+        constructor(val) {
+            this.#content = val
+        }
+
+        set(val) {
+            this.#content = val
+        }
+
+        get() {
+            return this.#content
+        }
+    }
+
+    static AST = class AST {
+        /**
+         * @type {number[]} Basically index of node in node pool
+         */
+        #parentNodes
+        /**
+         * @type {ASTNode[]}
+         */
+        #nodePool
+
+        constructor() {
+            this.#parentNodes = []
+            this.#nodePool = []
+        }
+    }
+
+    static ASTNode = class ASTNode {
+
     }
 
     /**
@@ -56,16 +126,25 @@ class Parser {
         throw new SyntaxError("Invalid syntax" + (msg ? ": ".concat(msg) : ""))
     }
 
-    constructor(tokens) {
-        this.tokens = new Parser.ArrayIterator(tokens)
-        this.advance()
+    constructor() {
     }
 
     advance() {
         this.currentToken = this.tokens.next
     }
 
-    parse() {
+    reparse(tokens) {
+        this.tokens = new Parser.ArrayIterator(tokens)
+        this.advance()
+        return this.parse()
+    }
 
+    parse() {
+    }
+
+    static arrayInstances(arr, instances) {
+        if (arr.length !== instances.length) return false
+        for (var i = 0; i < arr.length; i++) if (!(arr[i] instanceof instances[i])) return false
+        return true
     }
 }

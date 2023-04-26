@@ -72,7 +72,8 @@ class MindustryTokens {
     static COMMENT = class extends Token {
         type = "comment"
         style = {
-            color: "lightgray"
+            color: "lightgray",
+            margin: 0
         }
     }
     static PHRASE = class extends Token {

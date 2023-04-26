@@ -146,14 +146,14 @@ class MindustryLexer extends Lexer {
                 for (i = 0; i < num; i++) this.skipToken()
                 if (num % MindustryLexer.SPACE_TAB_SIZE === 0) {
                     for (i = 0; i < Math.floor(num / MindustryLexer.SPACE_TAB_SIZE); i++) {
-                        yield this.createToken(MindustryTokens.TAB)
+                        yield new MindustryTokens.TAB
                     }
                 }
             } else if (MindustryLexer.TAB.includes(this.currentChar)) {
                 num = this.getTabsNum()
                 for (i = 0; i < num; i++) {
                     this.skipToken()
-                    yield this.createToken(MindustryTokens.TAB)
+                    yield new MindustryTokens.TAB
                 }
             } else if (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar)) {
                 yield this.generateNumber()
@@ -166,10 +166,10 @@ class MindustryLexer extends Lexer {
                     this.nextToken()
                     for (i = 0; i < operator.length - 1; i++) this.keepToken()
                     for (i = 0; i < countSkip; i++) this.skipToken()
-                    yield this.createToken(MindustryTokens.OPERATOR, [operatorObject?.type, "", operatorObject])
+                    yield new MindustryTokens.OPERATOR(operatorObject?.type, "", operatorObject)
                 } else {
                     if (operator === MindustryLexer.SET) {
-                        yield this.createToken(MindustryTokens.SET)
+                        yield new MindustryTokens.SET()
                         this.nextToken()
                         for (i = 0; i < countSkip; i++) this.skipToken()
                     } else {
@@ -179,12 +179,12 @@ class MindustryLexer extends Lexer {
                     }
                 }
             } else if (this.currentChar === MindustryLexer.SET) {
-                yield this.createToken(MindustryTokens.SET)
+                yield new MindustryTokens.SET()
                 this.nextToken()
                 this.advance()
             } else if (MindustryLexer.PARENS.map(par => par.char === this.currentChar).includes(true)) {
                 var paren = MindustryLexer.PARENS.filter(par => par.char === this.currentChar)[0]
-                yield this.createToken(MindustryTokens.PAREN, [paren.type, "", paren])
+                yield new MindustryTokens.PAREN(paren.type, "", paren)
                 this.nextToken()
                 this.advance()
             } else if (MindustryLexer.NEWLINE.includes(this.currentChar)) {
@@ -192,7 +192,7 @@ class MindustryLexer extends Lexer {
             } else if (MindustryLexer.STRINGS.includes(this.currentChar)) {
                 yield this.generateString()
             } else if (this.currentChar === MindustryLexer.COMMA) {
-                yield this.createToken(MindustryTokens.COMMA)
+                yield new MindustryTokens.COMMA()
                 this.nextToken()
                 this.advance()
             } else if (this.currentChar === MindustryLexer.COMMENT) {
@@ -208,15 +208,15 @@ class MindustryLexer extends Lexer {
                     comma = true
                     phrase = phrase.slice(0, -1)
                 }
-                if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PARAM_PHRASE, ["", phrase])
-                else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, ["boolean", phrase])
-                // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, ["", phrase])
-                else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield this.createToken(MindustryTokens.LINK_PHRASE, ["", phrase])
-                else yield this.createToken(MindustryTokens.PHRASE, ["", phrase])
+                if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield new MindustryTokens.PARAM_PHRASE("", phrase)
+                else if (MindustryLexer.BOOLEAN.includes(phrase)) yield new MindustryTokens.VALUE("boolean", phrase)
+                // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield new MindustryTokens.KNOWN_PHRASE("", phrase)
+                else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield new MindustryTokens.LINK_PHRASE("", phrase)
+                else yield new MindustryTokens.PHRASE("", phrase)
                 this.nextToken()
                 for (i = 0; i < phrase.length - 1; i++) this.keepToken()
                 if (comma) {
-                    yield this.createToken(MindustryTokens.COMMA)
+                    yield new MindustryTokens.COMMA()
                     this.nextToken()
                 }
                 for (i = 0; i < countSkip; i++) this.skipToken()
@@ -228,17 +228,6 @@ class MindustryLexer extends Lexer {
             }
             loopI++
         }
-    }
-
-    /**
-     * @param type {(subtype: string, content: any, subtypeObject: any)=>Token}
-     * @param args {any[]}
-     * @returns {Token}
-     */
-    createToken(type, ...args) {
-        var token = new type(...(args || []))
-        token.atLine(this.lineNumber)
-        return token
     }
 
     getSpacesNum() {
@@ -292,7 +281,7 @@ class MindustryLexer extends Lexer {
             var to_power_of_ten = Number(this.generateNumber().content)
             value = value * (10 ** to_power_of_ten)
         }
-        return this.createToken(MindustryTokens.VALUE, [isHex ? "hex-number" : "number", value])
+        return new MindustryTokens.VALUE(isHex ? "hex-number" : "number", value)
     }
 
     generateColor() {
@@ -306,7 +295,7 @@ class MindustryLexer extends Lexer {
             this.keepToken()
         }
 
-        return this.createToken(MindustryTokens.VALUE, [(color_str.length === 9) ? "color" : "color-invalid", color_str])
+        return new MindustryTokens.VALUE((color_str.length === 9) ? "color" : "color-invalid", color_str)
     }
 
     generateNewline() {
@@ -314,9 +303,7 @@ class MindustryLexer extends Lexer {
             this.advance()
             this.skipToken()
         }
-        var token = this.createToken(MindustryTokens.NEWLINE)
-        this.newline()
-        return token
+        return new MindustryTokens.NEWLINE
     }
 
     generateString() {
@@ -352,7 +339,7 @@ class MindustryLexer extends Lexer {
             this.keepToken()
         }
 
-        return this.createToken(MindustryTokens.VALUE, ["string", text])
+        return new MindustryTokens.VALUE("string", text)
     }
 
     generateComment() {
@@ -385,7 +372,7 @@ class MindustryLexer extends Lexer {
             this.keepToken()
         }
 
-        return this.createToken(MindustryTokens.COMMENT, ["", comment])
+        return new MindustryTokens.COMMENT("", comment)
     }
 
     generateToSpaceOrToken() {

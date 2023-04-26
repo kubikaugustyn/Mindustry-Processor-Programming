@@ -10,8 +10,13 @@ class Compiler {
         throw new Error("Compilation error" + (msg ? ": ".concat(msg) : ""))
     }
 
-    constructor(tree) {
+    constructor() {
+
+    }
+
+    recompile(tree) {
         this.tree = tree
+        return this.compile()
     }
 
     compile() {

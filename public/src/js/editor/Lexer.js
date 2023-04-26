@@ -2,10 +2,11 @@ var __author__ = "kubik.augustyn@post.cz"
 
 class Lexer {
     static StringIterator = class StringIterator {
+        // String iterator, stores items using run length encoding
         /**
-         * @type {string[]}
+         * @type {(string|(number|string)[])[]}
          */
-        #values = []
+        #value = []
         #i = 0
         #done = false
         #almostDone = false
@@ -24,13 +25,24 @@ class Lexer {
             this.#almostDone = false
         }
 
-        get next() {
-            if (this.#i >= this.#values.length) this.#done = true
-            if (this.#i >= this.#values.length - 1) this.#almostDone = true
-            if (this.#values[this.#i] === "\\" && !this.done) {
-                return this.#values[this.#i++].concat(this.next)
+        get length() {
+            return this.#value.reduce((length, val) => length + (typeof val === "string" ? val.length : val[0]), 0)
+        }
+
+        #itemAtI(findI) {
+            var i = 0
+            for (var val of this.#value) {
+                var len = typeof val === "string" ? val.length : val[0]
+                if (i + len > findI) return typeof val === "string" ? val[findI - i] : val[1]
+                i += len
             }
-            return this.currentChar = this.#values[this.#i++]
+        }
+
+        get next() {
+            var length = this.length;
+            if (this.#i >= length) this.#done = true
+            if (this.#i >= length - 1) this.#almostDone = true
+            return this.currentChar = this.#itemAtI(this.#i++)
         }
 
         get done() {
@@ -42,18 +54,28 @@ class Lexer {
         }
 
         undo(len) {
+            var length = this.length;
             this.#i -= len
-            this.#done = this.#i >= this.#values.length
-            this.#almostDone = this.#i >= this.#values.length - 1
+            this.#done = this.#i >= length
+            this.#almostDone = this.#i >= length - 1
         }
 
         add(string) {
-            this.#values.push(...string.split(""))
+            if (!string) {
+                this.undo(0)
+                return
+            }
+            var lastVal = this.#value[this.#value.length - 1]
+            if (typeof lastVal === "string" && lastVal === string) {
+                this.#value[this.#value.length - 1] = [2, string]
+            } else if (lastVal instanceof Array && lastVal[1] === string) {
+                this.#value[this.#value.length - 1][0] += 1
+            } else this.#value.push(string)
             this.undo(0)
         }
 
         toString() {
-            return this.#values.join("")
+            return this.#value.map(a => typeof a === "string" ? a : a[1].repeat(a[0])).join("")
         }
     }
 
@@ -69,11 +91,13 @@ class Lexer {
      * * = Skip this char (for non-parsed spaces etc.)
      * @type {Lexer.StringIterator}
      */
-    tokenText = new Lexer.StringIterator("")
+    tokenText
+    /**
+     * @type {number}
+     */
+    lineNumber
 
-    constructor(text) {
-        this.text = new Lexer.StringIterator(text)
-        this.advance()
+    constructor() {
     }
 
     advance() {
@@ -91,6 +115,18 @@ class Lexer {
     skipToken() {
         // console.warn("Skip token")
         this.tokenText.add("*")
+    }
+
+    newline() {
+        this.lineNumber++
+    }
+
+    regenerateTokens(text) {
+        this.lineNumber = 0
+        this.text = new Lexer.StringIterator(text)
+        this.tokenText = new Lexer.StringIterator("")
+        this.advance()
+        return this.generateTokens()
     }
 
     * generateTokens() {
