@@ -166,7 +166,7 @@ class MindustryLexer extends Lexer {
                     this.nextToken()
                     for (i = 0; i < operator.length - 1; i++) this.keepToken()
                     for (i = 0; i < countSkip; i++) this.skipToken()
-                    yield this.createToken(MindustryTokens.OPERATOR, [operatorObject?.type, "", operatorObject])
+                    yield this.createToken(MindustryTokens.OPERATOR, operatorObject?.type, "", operatorObject)
                 } else {
                     if (operator === MindustryLexer.SET) {
                         yield this.createToken(MindustryTokens.SET)
@@ -184,7 +184,7 @@ class MindustryLexer extends Lexer {
                 this.advance()
             } else if (MindustryLexer.PARENS.map(par => par.char === this.currentChar).includes(true)) {
                 var paren = MindustryLexer.PARENS.filter(par => par.char === this.currentChar)[0]
-                yield this.createToken(MindustryTokens.PAREN, [paren.type, "", paren])
+                yield this.createToken(MindustryTokens.PAREN, paren.type, "", paren)
                 this.nextToken()
                 this.advance()
             } else if (MindustryLexer.NEWLINE.includes(this.currentChar)) {
@@ -208,11 +208,11 @@ class MindustryLexer extends Lexer {
                     comma = true
                     phrase = phrase.slice(0, -1)
                 }
-                if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PARAM_PHRASE, ["", phrase])
-                else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, ["boolean", phrase])
-                // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, ["", phrase])
-                else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield this.createToken(MindustryTokens.LINK_PHRASE, ["", phrase])
-                else yield this.createToken(MindustryTokens.PHRASE, ["", phrase])
+                if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PARAM_PHRASE, "", phrase)
+                else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, "boolean", phrase)
+                // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, "", phrase)
+                else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield this.createToken(MindustryTokens.LINK_PHRASE, "", phrase)
+                else yield this.createToken(MindustryTokens.PHRASE, "", phrase)
                 this.nextToken()
                 for (i = 0; i < phrase.length - 1; i++) this.keepToken()
                 if (comma) {
@@ -232,11 +232,11 @@ class MindustryLexer extends Lexer {
 
     /**
      * @param type {(subtype: string, content: any, subtypeObject: any)=>Token}
-     * @param args {any[]}
+     * @param args {any}
      * @returns {Token}
      */
     createToken(type, ...args) {
-        var token = new type(...(args || []))
+        var token = args ? new type(...args) : new type("", undefined, undefined)
         token.atLine(this.lineNumber)
         return token
     }
@@ -292,7 +292,7 @@ class MindustryLexer extends Lexer {
             var to_power_of_ten = Number(this.generateNumber().content)
             value = value * (10 ** to_power_of_ten)
         }
-        return this.createToken(MindustryTokens.VALUE, [isHex ? "hex-number" : "number", value])
+        return this.createToken(MindustryTokens.VALUE, isHex ? "hex-number" : "number", value)
     }
 
     generateColor() {
@@ -306,7 +306,7 @@ class MindustryLexer extends Lexer {
             this.keepToken()
         }
 
-        return this.createToken(MindustryTokens.VALUE, [(color_str.length === 9) ? "color" : "color-invalid", color_str])
+        return this.createToken(MindustryTokens.VALUE, (color_str.length === 9) ? "color" : "color-invalid", color_str)
     }
 
     generateNewline() {
@@ -352,7 +352,7 @@ class MindustryLexer extends Lexer {
             this.keepToken()
         }
 
-        return this.createToken(MindustryTokens.VALUE, ["string", text])
+        return this.createToken(MindustryTokens.VALUE, "string", text)
     }
 
     generateComment() {
@@ -385,7 +385,7 @@ class MindustryLexer extends Lexer {
             this.keepToken()
         }
 
-        return this.createToken(MindustryTokens.COMMENT, ["", comment])
+        return this.createToken(MindustryTokens.COMMENT, "", comment)
     }
 
     generateToSpaceOrToken() {

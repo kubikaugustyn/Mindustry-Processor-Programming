@@ -93,24 +93,43 @@ class Parser {
         }
     }
 
+    static AtomicInteger = class AtomicInteger extends Parser.AtomicValue {
+        add(num = 1) {
+            this.set(this.get() + num)
+        }
+
+        sub(num = 1) {
+            this.set(this.get() - num)
+        }
+
+        mul(num = 1) {
+            this.set(this.get() * num)
+        }
+
+        div(num = 1) {
+            this.set(this.get() / num)
+        }
+    }
+
     static AST = class AST {
         /**
          * @type {number[]} Basically index of node in node pool
          */
-        #parentNodes
+        parentNodes
         /**
          * @type {ASTNode[]}
          */
-        #nodePool
+        nodePool
 
         constructor() {
-            this.#parentNodes = []
-            this.#nodePool = []
+            this.parentNodes = []
+            this.nodePool = []
         }
     }
 
     static ASTNode = class ASTNode {
-
+        type
+        lineNum
     }
 
     /**
@@ -122,7 +141,8 @@ class Parser {
      */
     tokens
 
-    throwError(msg) {
+    throwError(msg, tok) {
+        tok && console.log("At token:", tok)
         throw new SyntaxError("Invalid syntax" + (msg ? ": ".concat(msg) : ""))
     }
 
@@ -145,6 +165,11 @@ class Parser {
     static arrayInstances(arr, instances) {
         if (arr.length !== instances.length) return false
         for (var i = 0; i < arr.length; i++) if (!(arr[i] instanceof instances[i])) return false
+        return true
+    }
+
+    static instanceOf(thing, instances) {
+        for (var i = 0; i < instances.length; i++) if (!(thing instanceof instances[i])) return false
         return true
     }
 }

@@ -210,6 +210,14 @@ highlighter.editorElements.input.value = `a = 8 xor (7 + 3)
                /   \\
               7     3
 *#`
+highlighter.editorElements.input.value = `8 xor (7 + 3)
+#*AST should be:
+  XOR (OPERATION:XOR)
+       /   \\
+      8     ADD (OPERATION:ADD)
+           /   \\
+          7     3
+*#`
 var blocksViewContainer = blocksView.getContainer()
 // blocksViewContainer.innerHTML = "RIGHT"
 blocksViewContainer.classList.add("right")
