@@ -23,6 +23,14 @@ class Parser {
             return this.#values[this.#i++]
         }
 
+        get nextPreview() {
+            return this.#values[this.#i + 1]
+        }
+
+        get lastPreview() {
+            return this.#values[this.#i - 1]
+        }
+
         get done() {
             return this.#done
         }
@@ -150,6 +158,7 @@ class Parser {
     }
 
     advance() {
+        console.warn(new Error("Advance"))
         this.currentToken = this.tokens.next
     }
 

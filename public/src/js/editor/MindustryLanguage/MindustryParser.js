@@ -1,5 +1,7 @@
 var __author__ = "kubik.augustyn@post.cz"
 
+// https://github.com/frozein/PropScript/blob/master/src/parser.cpp
+
 class MindustryParser extends Parser {
     static ERROR_INVALID_TOKEN = "INVALID TOKEN"
     static ERROR_EXPECTED_CLOSING_PAREN = "EXPECTED CLOSING PARENTHESIS"
@@ -8,6 +10,7 @@ class MindustryParser extends Parser {
 
     static OPNode = "OPNode"
     static PHRASENode = "PHRASENode"
+    static NUMBERNode = "NUMBERNode"
 
     static KEYWORDS = ["function", "return", "if", "else", "for", "in"]
 
@@ -31,7 +34,7 @@ class MindustryParser extends Parser {
     }
 
     parseStatement(ast, numOpenParens) {
-        console.log(this.currentToken)
+        console.log("Parse statement", ast, numOpenParens.get(), this.currentToken)
         // TODO IF / FOR
         // TODO FUNC
         // TODO RETURN
@@ -61,46 +64,43 @@ class MindustryParser extends Parser {
         opNode.op.left = left
         opNode.op.right = right
 
-        /*//ITERATE TO GET REST OF NODES:
-        while(curTokenIdx < tokens.size() && tokens[curTokenIdx].type != PStoken::NEWLINE && tokens[curTokenIdx].str != PS_SEPERATOR_CURLY_OPEN &&
-              std::find(PS_CLOSED_SEPERATORS.begin(), PS_CLOSED_SEPERATORS.end(), tokens[curTokenIdx].str) == PS_CLOSED_SEPERATORS.end())
-        {
-            PSnode newOp = _ps_get_op_node(ast, tokens, curTokenIdx, numOpenParens);
+        //ITERATE TO GET REST OF NODES:
+        while (!this.tokens.done && !(this.currentToken instanceof MindustryTokens.NEWLINE) && !(this.currentToken instanceof MindustryTokens.PAREN && (
+            this.currentToken.subtypeObject === MindustryLexer.PARENS[4] || this.currentToken.subtypeObject === MindustryLexer.PARENS[1] ||
+            this.currentToken.subtypeObject === MindustryLexer.PARENS[3] || this.currentToken.subtypeObject === MindustryLexer.PARENS[5]
+        ))) {
+            var newOp = this.getOPNode(ast, numOpenParens);
 
-            right = _ps_parse_non_op(ast, tokens, curTokenIdx, numOpenParens);
+            right = this.parseNonOP(ast, numOpenParens);
 
             //ADD TO EXISTING NODES WITH CORRECT ORDER OF OPERATIONS:
-            if(_ps_precedence(newOp.op.type) >= _ps_precedence(opNode.op.type))
-            {
-                newOp.op.left = _ps_add_node(ast, opNode);
+            if (this.precedence(newOp.op) >= this.precedence(opNode.op)) {
+                newOp.op.left = this.addNode(ast, opNode);
                 newOp.op.right = right;
                 opNode = newOp;
-            }
-            else
-            {
+            } else {
                 //find rightmost op with lesser order:
-                PSnode* rightMost = &opNode;
-                PSnode rightModeRight = ast->nodePool[rightMost->op.right];
-                while(rightModeRight.type == PSnode::OP &&
-                     _ps_precedence(newOp.op.type) < _ps_precedence(rightModeRight.op.type) &&
-                     !rightMost->op.inParens)
-                {
-                    rightMost = &ast->nodePool[rightMost->op.right];
-                    rightModeRight = ast->nodePool[rightMost->op.right];
+                var rightMost = opNode;
+                var rightModeRight = ast.nodePool[rightMost.op.right];
+                while (rightModeRight instanceof MindustryTokens.OPERATOR &&
+                this.precedence(newOp.op) < this.precedence(rightModeRight.op) &&
+                !rightMost.op.inParens) {
+                    rightMost = ast.nodePool[rightMost.op.right];
+                    rightModeRight = ast.nodePool[rightMost.op.right];
                 }
 
-                newOp.op.left = rightMost->op.right;
+                newOp.op.left = rightMost.op.right;
                 newOp.op.right = right;
-                rightMost->op.right = _ps_add_node(ast, newOp);
+                rightMost.op.right = this.addNode(ast, newOp);
             }
-        }*/
+        }
 
         return this.addNode(ast, opNode)
     }
 
     parseNonOP(ast, numOpenParens) {
         var node
-        if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken === MindustryLexer.PARENS[0]) node = this.parseStatementInParens(ast, numOpenParens)
+        if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[0]) node = this.parseStatementInParens(ast, numOpenParens)
         else node = this.parsePhrase(ast, numOpenParens)
         this.continueStatement(numOpenParens)
         return node
@@ -110,7 +110,7 @@ class MindustryParser extends Parser {
         numOpenParens.add()
         this.advance()
         var node = this.parseStatement(ast, numOpenParens)
-        if (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken === MindustryLexer.PARENS[1])) this.throwError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN)
+        if (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[1])) this.throwError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN)
         ast.nodePool[node].op.inParens = true
 
         numOpenParens.sub()
@@ -119,7 +119,50 @@ class MindustryParser extends Parser {
     }
 
     parsePhrase(ast, numOpenParens) {
-        // TODO _ps_parse_id
+        var negative = false
+        if (this.currentToken instanceof MindustryTokens.OPERATOR && this.currentToken.subtypeObject === MindustryLexer.OPERATORS[1]) {
+            negative = true
+            this.advance()
+        }
+
+        this.forcePhrase(this.currentToken)
+
+        //FUNCTION:
+        if (this.tokens.nextPreview instanceof MindustryTokens.PAREN && this.tokens.nextPreview.subtypeObject === MindustryLexer.PARENS[0]) {
+            // TODO this
+        }
+
+        this.advance()
+        var token = this.currentToken
+
+        //NUMBER:
+        if (token instanceof MindustryTokens.VALUE && token.subtype === "number") {
+            var numNode = new Parser.ASTNode
+            numNode.type = MindustryParser.NUMBERNode
+            numNode.lineNum = this.tokens.lastPreview.lineNum
+            numNode.literal = {value: token.content}
+            return this.addNode(ast, numNode)
+        }
+
+        //VARIABLE:
+        var varNode = new Parser.ASTNode
+        varNode.type = MindustryParser.PHRASENode
+        varNode.lineNum = this.currentToken.lineNum
+        varNode.phrase = {type: "VAR", name: token.content}
+
+        //index into variable:
+        // NOT DOING THAT
+
+        if (negative) {
+            var minusNode = new Parser.ASTNode
+            minusNode.type = MindustryParser.OPNode
+            minusNode.lineNum = this.currentToken.lineNum
+            minusNode.op = {type: "SUB-TODO"}
+
+
+            var negOne = new Parser.ASTNode
+            negOne.type=MindustryParser.NUMBERNode
+        } else return this.addNode(ast, varNode)
     }
 
     getOPNode(ast, numOpenParens) {
@@ -129,6 +172,7 @@ class MindustryParser extends Parser {
         var opNode = new Parser.ASTNode
         opNode.type = MindustryParser.OPNode
         opNode.lineNum = this.currentToken.lineNum
+        opNode.op = {}
         opNode.op.type = this.currentToken.subtypeObject
 
         this.advance()
@@ -150,6 +194,11 @@ class MindustryParser extends Parser {
 
     removeNewline() {
         if (this.currentToken instanceof MindustryTokens.NEWLINE) this.advance()
+    }
+
+    precedence(op) {
+        console.log(op)
+        return 0
     }
 
     forcePhrase(token) {
