@@ -9,17 +9,30 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
     // this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
     // this.editorElements.code.style.color = "blue"
 
+    function onError(msg, token) {
+        if (typeof token?.lineNum === "undefined") throw true
+        // console.log("ERROR", msg, token.lineNum, token, this)
+        var lines = this.editorElements.input.value.replaceAll("\t", "<tab></tab>").split("\n")
+        this.editorElements.code.style.color = "red"
+        this.editorElements.code.innerHTML = `<pre style="margin: 0">${lines.slice(0, token.lineNum).map(a => a || " ").join("<br>")}</pre>`
+        this.editorElements.code.innerHTML += `<pre style="margin: 0; color: blue">${lines[token.lineNum]}</pre>`
+        this.editorElements.code.innerHTML += `<pre style="margin: 0">${lines.slice(token.lineNum + 1).map(a => a || " ").join("<br>")}</pre>`
+        throw false
+    }
+
     try {
         var tokensGenerator = lexer.regenerateTokens(this.editorElements.input.value)
         var tokens = []
         for (let token of tokensGenerator) tokens.push(token)
 
+        parser.throwError = onError.bind(this)
         // Parse (generate Abstract Syntax Tree)
         var tree = parser.reparse(tokens.filter(token =>
             !(token instanceof MindustryTokens.TAB || token instanceof MindustryTokens.COMMENT)
         ))
         if (tree) {
             console.log(tree)
+            compiler.throwError = onError.bind(this)
             // Compile (Abstract Syntax Tree --> list of ProcessorBlock)
             var processorBlocks = compiler.recompile(tree)
             if (processorBlocks) {
@@ -92,12 +105,14 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
             this.editorElements.code.style.removeProperty("color")
         }
     } catch (e) {
-        console.warn(e)
-        this.editorElements.code.style.color = "red"
-        this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
+        if (e) {
+            console.warn(e)
+            this.editorElements.code.style.color = "red"
+            this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
+        }
     }
 }, function (code) {
-    this.editorElements.code.innerHTML = code.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
+    this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${code.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
     this.editorElements.code.style.color = "blue"
 })
 document.body.classList.add("split-screen")
@@ -192,11 +207,11 @@ outX, outY, found = ulocate.ore(@copper)
 outX, outY, found, building = ulocate.building(core, true)
 outX, outY, found, building = ulocate.spawn()
 outX, outY, found, building = ulocate.damaged()*#`
-highlighter.editorElements.input.value = `a = 8 xor 7
+highlighter.editorElements.input.value = `a = 8 + 7
 #*AST should be:
         SET
       /     \\
-     a      XOR (OPERATION:XOR)
+     a      ADD (OPERATION:ADD)
            /   \\
           8     7
 *#`
@@ -218,6 +233,18 @@ highlighter.editorElements.input.value = `8 xor (7 + 3)
            /   \\
           7     3
 *#`
+highlighter.editorElements.input.value = `a = 8 + a(4)`
+highlighter.editorElements.input.value = `if (8 < 1){
+\ta()
+}
+else {
+\tb()
+}`
+highlighter.editorElements.input.value = `i = 0
+while (i < 100){
+\tucontrol.approach(@thisx, (@thisy + 2), 5)
+\ti = i + 1
+}`
 var blocksViewContainer = blocksView.getContainer()
 // blocksViewContainer.innerHTML = "RIGHT"
 blocksViewContainer.classList.add("right")

@@ -78,51 +78,20 @@ class MindustryTokens {
     }
     static PHRASE = class extends Token {
         type = "phrase"
-        style = {
-            color: "cyan"
-        }
-    }
-    /*static KNOWN_PHRASE = class extends Token {
-        type = "known-phrase"
-        style = {
-            color: "magenta"
-        }
-    }*/
-    static FUNCTION_CALL_PHRASE = class extends Token {
-        type = "function-call-phrase"
         subtypeStyle = {
             "invalid": {color: "red"},
-            "*": {color: "magenta"}
-        }
-    }
-    static STATEMENT_PHRASE = class extends Token {
-        type = "statement-phrase"
-        style = {
-            color: "rgb(0, 49, 180)"
-        }
-    }
-    static VARIABLE_PHRASE = class extends Token {
-        type = "variable-phrase"
-        subtypeStyle = {
-            "invalid-reassignment": {"text-decoration": "underline", "text-decoration-color": "blue"},
-            "invalid-not-assigned": {
+            "keyword": {color: "rgb(0, 49, 180)"},
+            "function-call": {"font-style": "italic"},
+            "variable-invalid-reassignment": {"text-decoration": "underline", "text-decoration-color": "blue"},
+            "variable-invalid-not-assigned": {
                 "text-decoration": "underline",
                 "text-decoration-style": "wavy",
                 "text-decoration-color": "red"
             },
-            "*": {color: "rgb(36, 143, 143)"}
-        }
-    }
-    static PARAM_PHRASE = class extends Token {
-        type = "param-phrase"
-        style = {
-            color: "green"
-        }
-    }
-    static LINK_PHRASE = class extends Token {
-        type = "link-phrase"
-        style = {
-            color: "gray"
+            "variable": {color: "rgb(36, 143, 143)"},
+            "param": {color: "green"},
+            "link": {color: "gray"},
+            "*": {color: "cyan"}
         }
     }
 }

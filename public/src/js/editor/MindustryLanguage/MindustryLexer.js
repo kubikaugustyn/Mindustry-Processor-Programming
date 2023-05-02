@@ -56,34 +56,44 @@ class MindustryLexer extends Lexer {
          * @type {boolean}
          */
         has2inputs
+        /**
+         * @type {number}
+         */
+        precedence
 
-        constructor(chars, type, has2inputs = true) {
+        constructor(chars, type, has2inputs = true, precedence = 0) {
             this.chars = chars
             this.type = type
             this.has2inputs = has2inputs
+            this.precedence = precedence
         }
 
         startsWith(char) {
             return this.chars.startsWith(char)
         }
+
+        prec(precedence) {
+            this.precedence = precedence
+            return this
+        }
     }
     static COUNT_OPERATORS = (operators, start) => operators.reduce((prev, curr) => prev + Number(curr.startsWith(start)), 0)
     static OPERATORS = [// Character considered operators
-        new MindustryLexer.OPERATOR("+", "plus"),
-        new MindustryLexer.OPERATOR("-", "minus"),
-        new MindustryLexer.OPERATOR("*", "multiply"),
-        new MindustryLexer.OPERATOR("/", "divide"),
+        new MindustryLexer.OPERATOR("+", "plus").prec(20),
+        new MindustryLexer.OPERATOR("-", "minus").prec(20),
+        new MindustryLexer.OPERATOR("*", "multiply").prec(10),
+        new MindustryLexer.OPERATOR("/", "divide").prec(10),
         new MindustryLexer.OPERATOR("//", "integer-divide"),
-        new MindustryLexer.OPERATOR("%", "modulo"),
+        new MindustryLexer.OPERATOR("%", "modulo").prec(10),
         new MindustryLexer.OPERATOR("^", "power"),
-        new MindustryLexer.OPERATOR("==", "equal"),
-        new MindustryLexer.OPERATOR("not", "not-equal"),
+        new MindustryLexer.OPERATOR("==", "equal").prec(40),
+        new MindustryLexer.OPERATOR("not", "not-equal").prec(40),
         new MindustryLexer.OPERATOR("and", "logical-AND"),
-        new MindustryLexer.OPERATOR("<", "smaller"),
-        new MindustryLexer.OPERATOR("<=", "smaller-equal"),
-        new MindustryLexer.OPERATOR(">", "greater"),
-        new MindustryLexer.OPERATOR(">=", "greater-equal"),
-        new MindustryLexer.OPERATOR("===", "strict-equal"),
+        new MindustryLexer.OPERATOR("<", "smaller").prec(40),
+        new MindustryLexer.OPERATOR("<=", "smaller-equal").prec(40),
+        new MindustryLexer.OPERATOR(">", "greater").prec(40),
+        new MindustryLexer.OPERATOR(">=", "greater-equal").prec(40),
+        new MindustryLexer.OPERATOR("===", "strict-equal").prec(40),
         new MindustryLexer.OPERATOR("<<", "left-bitshift"),
         new MindustryLexer.OPERATOR(">>", "right-bitshift"),
         new MindustryLexer.OPERATOR("or", "bitwise-OR"),
@@ -159,7 +169,7 @@ class MindustryLexer extends Lexer {
                 yield this.generateNumber()
             } else if (this.currentChar === MindustryLexer.COLOR_ANNOTATION) {
                 yield this.generateColor()
-            } else if (MindustryLexer.OPERATORS.map(op => op.startsWith(this.currentChar)).includes(true)) {
+            } else if (MindustryLexer.OPERATORS.find(op => op.startsWith(this.currentChar))) {
                 [operator, countSkip] = this.generateToSpaceOrToken()
                 var operatorObject = MindustryLexer.OPERATORS.filter(op => op.chars === operator)[0]
                 if (operatorObject) {
@@ -208,10 +218,10 @@ class MindustryLexer extends Lexer {
                     comma = true
                     phrase = phrase.slice(0, -1)
                 }
-                if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PARAM_PHRASE, "", phrase)
+                if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "param", phrase)
                 else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, "boolean", phrase)
                 // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, "", phrase)
-                else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield this.createToken(MindustryTokens.LINK_PHRASE, "", phrase)
+                else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield this.createToken(MindustryTokens.PHRASE, "link", phrase)
                 else yield this.createToken(MindustryTokens.PHRASE, "", phrase)
                 this.nextToken()
                 for (i = 0; i < phrase.length - 1; i++) this.keepToken()
