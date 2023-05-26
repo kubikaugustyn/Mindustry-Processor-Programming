@@ -44,6 +44,7 @@ class MindustryTokens {
     static OPERATOR = class extends Token {
         type = "operator"
         style = {
+            // color: "rgb(132, 25, 187)"
             color: "magenta"
         }
         static subtypeToProcessorName = {
@@ -80,8 +81,9 @@ class MindustryTokens {
         type = "phrase"
         subtypeStyle = {
             "invalid": {color: "red"},
-            "keyword": {color: "rgb(0, 49, 180)"},
+            "keyword": {color: "rgb(0, 51, 179)"},
             "function-call": {"font-style": "italic"},
+            "function-definition": {"font-style": "italic", color: "rgb(0, 97, 125)"},
             "variable-invalid-reassignment": {"text-decoration": "underline", "text-decoration-color": "blue"},
             "variable-invalid-not-assigned": {
                 "text-decoration": "underline",

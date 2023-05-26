@@ -10,9 +10,10 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
     // this.editorElements.code.style.color = "blue"
 
     function onError(msg, token) {
-        if (typeof token?.lineNum === "undefined") throw true
-        // console.log("ERROR", msg, token.lineNum, token, this)
+        console.warn("Error:", msg, "at token", token)
         var lines = this.editorElements.input.value.replaceAll("\t", "<tab></tab>").split("\n")
+        if (typeof token?.lineNum === "undefined" || token?.lineNum >= lines.length) throw true
+        // console.log("ERROR", msg, token.lineNum, token, this)
         this.editorElements.code.style.color = "red"
         this.editorElements.code.innerHTML = `<pre style="margin: 0">${lines.slice(0, token.lineNum).map(a => a || " ").join("<br>")}</pre>`
         this.editorElements.code.innerHTML += `<pre style="margin: 0; color: blue">${lines[token.lineNum]}</pre>`
@@ -87,7 +88,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
                     currentSpan = undefined
                     currentToken = undefined
                     if (srcText === "\n") {
-                        // if (tokensFiltered[currentTokenIndex]?.type === "comment") break
+                        if (tokensFiltered[currentTokenIndex]?.type === "comment") break
                         this.editorElements.code.appendChild(document.createElement("br"))
                         break
                     } else if (srcText === "\t") {
@@ -105,7 +106,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
             this.editorElements.code.style.removeProperty("color")
         }
     } catch (e) {
-        if (e) {
+        if (e.name) {
             console.warn(e)
             this.editorElements.code.style.color = "red"
             this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
@@ -121,7 +122,8 @@ var editor = highlighter.getEditor()
 editor.classList.add("left")
 document.body.appendChild(editor)
 // editor.style.height = "300px"
-highlighter.editorElements.input.value = `a = rand 9
+var codeExamples = [
+    `a = rand 9
 c = 0 ## Default value
 @counter = 7
 if (a > 8){
@@ -206,16 +208,16 @@ result = uradar(enemy, any, any, distance)
 outX, outY, found = ulocate.ore(@copper)
 outX, outY, found, building = ulocate.building(core, true)
 outX, outY, found, building = ulocate.spawn()
-outX, outY, found, building = ulocate.damaged()*#`
-highlighter.editorElements.input.value = `a = 8 + 7
+outX, outY, found, building = ulocate.damaged()*#`,
+    `a = 8 + 7
 #*AST should be:
         SET
       /     \\
      a      ADD (OPERATION:ADD)
            /   \\
           8     7
-*#`
-highlighter.editorElements.input.value = `a = 8 xor (7 + 3)
+*#`,
+    `a = 8 xor (7 + 3)
 #*AST should be:
         SET
       /     \\
@@ -224,27 +226,48 @@ highlighter.editorElements.input.value = `a = 8 xor (7 + 3)
           8     ADD (OPERATION:ADD)
                /   \\
               7     3
-*#`
-highlighter.editorElements.input.value = `8 xor (7 + 3)
+*#`,
+    `8 xor (7 + 3)
 #*AST should be:
   XOR (OPERATION:XOR)
        /   \\
       8     ADD (OPERATION:ADD)
            /   \\
           7     3
-*#`
-highlighter.editorElements.input.value = `a = 8 + a(4)`
-highlighter.editorElements.input.value = `if (8 < 1){
+*#`,
+    `a = 8 + a(4)`,
+    `if (8 < 1){
 \ta()
 }
 else {
 \tb()
-}`
-highlighter.editorElements.input.value = `i = 0
+}`,
+    `i = 0
 while (i < 100){
 \tucontrol.approach(@thisx, (@thisy + 2), 5)
 \ti = i + 1
-}`
+}`,
+    `function sqr(a){
+\treturn a * a
+}
+## TODO Don't need to store result in var if func is void
+a = control.config(sorter1, lookup.block(sqr(3)))`,
+    `i = 0
+y = @thisy + 2
+while (i < 100){
+\tucontrol.approach(@thisx, y, 5)
+\tif (ucontrol.within(@thisx, y, 10) == 1){
+\t\tbreak
+\t}
+\ti = i + 1
+}`,
+    `control.enabled(press1, 0)`,
+    `outX, outY, found = ulocate.ore(@copper)`,
+    `a = rand 9
+b = max a
+c = a max b`
+]
+highlighter.editorElements.input.value = codeExamples[11]
 var blocksViewContainer = blocksView.getContainer()
 // blocksViewContainer.innerHTML = "RIGHT"
 blocksViewContainer.classList.add("right")
