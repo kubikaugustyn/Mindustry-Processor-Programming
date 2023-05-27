@@ -50,6 +50,16 @@ class Parser {
             this.undo(0)
         }
 
+        getState() {
+            return [this.#i, this.#done, this.#almostDone]
+        }
+
+        setState(state) {
+            this.#i = state[0]
+            this.#done = state[1]
+            this.#almostDone = state[2]
+        }
+
         toArray() {
             return this.#values.slice()
         }
@@ -78,6 +88,15 @@ class Parser {
         item(i) {
             if (i >= this.#length) return
             return this.#content[i]
+        }
+
+        /**
+         * @param predicate {(value: any, index: number, obj: any[]) => unknown}
+         * @param thisArg {any}
+         * @return {any | undefined}
+         */
+        find(predicate, thisArg) {
+            return this.items.find(predicate, thisArg)
         }
 
         get items() {
@@ -119,6 +138,11 @@ class Parser {
         }
     }
 
+    /**
+     * @type {ArrayBuffer<AST>} Basically index of node in node pool
+     */
+    static AST_REUSE_BUFFER = new Parser.ArrayBuffer()
+
     static AST = class AST {
         /**
          * @type {number[]} Basically index of node in node pool
@@ -128,10 +152,36 @@ class Parser {
          * @type {ASTNode[]}
          */
         nodePool
+        /**
+         * @type {boolean}
+         */
+        free
 
         constructor() {
+            this.reset()
+        }
+
+        use() {
+            this.free = false
+        }
+
+        setFree() {
+            this.free = true
+        }
+
+        reset() {
             this.parentNodes = []
             this.nodePool = []
+            this.free = true
+        }
+
+        static getAST() {
+            var ast = Parser.AST_REUSE_BUFFER.find(ast => ast.free)
+            ast?.reset?.()
+            if (ast) return ast
+            ast = new Parser.AST()
+            Parser.AST_REUSE_BUFFER.add(ast)
+            return ast
         }
     }
 
@@ -148,10 +198,21 @@ class Parser {
      * @type {Parser.ArrayIterator}
      */
     tokens
+    /**
+     * @type {boolean}
+     */
+    quietError
 
     throwError(msg, tok) {
-        tok && console.log("At token:", tok)
+        if (!this.quietError && tok) {
+            console.log("At token:", tok)
+            this.quietError = false
+        }
         throw new SyntaxError("Invalid syntax" + (msg ? ": ".concat(msg) : ""))
+    }
+
+    handleError(msg, tok) {
+        this.throwError(msg, tok, this)
     }
 
     constructor() {
@@ -163,11 +224,16 @@ class Parser {
 
     reparse(tokens) {
         this.tokens = new Parser.ArrayIterator(tokens)
+        this.quietError = false
         this.advance()
         return this.parse()
     }
 
     parse() {
+    }
+
+    setQuietError(quiet = true) {
+        this.quietError = quiet
     }
 
     static arrayInstances(arr, instances) {

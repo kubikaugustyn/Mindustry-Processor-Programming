@@ -8,6 +8,7 @@
     float: left;
     height: 100%;
     width: 50%;
+    position: absolute;
 }
 
 .split-screen .right {

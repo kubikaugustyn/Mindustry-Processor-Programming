@@ -8,7 +8,7 @@ body {
 }
 
 tab {
-    width: 22px;
+    width: 19px;
     display: inline-block;
 }
 
@@ -45,7 +45,7 @@ tab {
 
 .editing, .highlighting, .highlighting * {
     /* Also add text styles to highlighing tokens */
-    font-size: 15pt;
+    font-size: 13pt;
     font-family: monospace;
     line-height: 20pt;
     tab-size: 2;

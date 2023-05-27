@@ -66,15 +66,27 @@ class MindustryTokens {
     }
     static SET = class extends Token {
         type = "set"
+
+        init() {
+            this.subtype = MindustryLexer?.SET_OP?.type
+            this.content = ""
+            this.subtypeObject = MindustryLexer?.SET_OP
+        }
     }
     static COMMA = class extends Token {
         type = "comma"
     }
     static COMMENT = class extends Token {
         type = "comment"
-        style = {
-            color: "lightgray",
-            margin: 0
+        subtypeStyle = {
+            "multiline": {
+                color: "lightgray",
+                margin: 0
+            },
+            "singleline": {
+                color: "darkgray",
+                margin: 0
+            }
         }
     }
     static PHRASE = class extends Token {

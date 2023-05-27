@@ -120,6 +120,7 @@ class MindustryLexer extends Lexer {
         new MindustryLexer.OPERATOR("atan", "arc-tangent", false),
         new MindustryLexer.OPERATOR("of", "of") // Custom, @maxItems of smelter1
     ]
+    static SET_OP = new MindustryLexer.OPERATOR("=", "set").prec(Infinity);
     static BOOLEAN = ["true", "false"]
     static SET = "=";
     static COMMA = ",";
@@ -143,12 +144,22 @@ class MindustryLexer extends Lexer {
         "uradar", "any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground", "distance", "health", "shield", "armor", "maxHealth",
         "ulocate.ore", "ulocate.building", "ulocate.spawn", "ulocate.damaged"
     ]*/
-    static PARAM_PHRASE_PREFIX = "@";
+    static PARAM_PHRASE_PREFIX = "@"
+    static VALIDATE_PHRASE = function (phrase) {
+        if (phrase.includes(MindustryLexer.PARAM_PHRASE_PREFIX)) {
+            return /^[a-zA-Z0-9.-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)
+        }
+        return /^[a-zA-Z0-9.-]+$/.test(phrase)
+    }
+    static VALIDATE_PHRASE_CHAR = function (char) {
+        return /[a-zA-Z0-9.@-]/.test(char)
+    };
 
     * generateTokens() {
         var limit = 10000
+        var notFoundTokenCountLimit = 100
         var loopI = 0
-        var num, i, operator, phrase, countSkip
+        var num, i, operator, phrase, countSkip, notFoundTokenCount = 0
         while (!this.text.done && loopI < limit) {
             var foundToken = true
             if (MindustryLexer.SPACE.includes(this.currentChar)) {
@@ -171,7 +182,7 @@ class MindustryLexer extends Lexer {
                 yield this.generateColor()
             } else if (MindustryLexer.OPERATORS.find(op => op.startsWith(this.currentChar))) {
                 [operator, countSkip] = this.generateToSpaceOrToken()
-                var operatorObject = MindustryLexer.OPERATORS.filter(op => op.chars === operator)[0]
+                var operatorObject = MindustryLexer.OPERATORS.find(op => op.chars === operator)
                 if (operatorObject) {
                     this.nextToken()
                     for (i = 0; i < operator.length - 1; i++) this.keepToken()
@@ -211,13 +222,22 @@ class MindustryLexer extends Lexer {
                 foundToken = false
             }
             if (!foundToken) {
-                [phrase, countSkip] = this.generateToSpaceOrToken()
-                if (!phrase) continue
+                [phrase, countSkip] = this.generatePhrase()
+                if (!phrase) {
+                    throw new Error(`Illegal non-alphanumeric or @ or . character in phrase.`)
+                    /*notFoundTokenCount++
+                    if (notFoundTokenCount >= notFoundTokenCountLimit) throw new class extends Error {
+                        name = "MindustryLexerTokenError"
+                        message = "No token was identified, error thrown to prevent infinite loop"
+                    }
+                    continue*/
+                }
                 var comma = false
                 if (phrase.endsWith(MindustryLexer.COMMA)) {
                     comma = true
                     phrase = phrase.slice(0, -1)
                 }
+                // if (!MindustryLexer.VALIDATE_PHRASE(phrase)) throw new Error(`Illegal non-alphanumeric or @ or . character in '${phrase}' phrase.`)
                 if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "param", phrase)
                 else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, "boolean", phrase)
                 // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, "", phrase)
@@ -395,7 +415,7 @@ class MindustryLexer extends Lexer {
             this.keepToken()
         }
 
-        return this.createToken(MindustryTokens.COMMENT, "", comment)
+        return this.createToken(MindustryTokens.COMMENT, multiline ? "multiline" : "singleline", comment)
     }
 
     generateToSpaceOrToken() {
@@ -407,6 +427,23 @@ class MindustryLexer extends Lexer {
             text += this.currentChar
             this.advance()
         }
+
+        var num = this.getSpacesNum()
+        return [text, num]
+    }
+
+    generatePhrase() {
+        var text = ""
+        var phraseLen = 0
+
+        while (!this.text.done && MindustryLexer.VALIDATE_PHRASE_CHAR(this.currentChar)) {
+            // console.log(`'${this.currentChar}'`)
+            text += this.currentChar
+            this.advance()
+            phraseLen++
+        }
+
+        if (!phraseLen) console.warn(`While generating phrase, encountered '${this.currentChar}' invalid character at the beginning.`)
 
         var num = this.getSpacesNum()
         return [text, num]

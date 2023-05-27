@@ -8,6 +8,7 @@ class Token {
     style
     subtypeStyle
     lineNum
+    original
 
     /**
      * @param subtype {string}
@@ -18,10 +19,18 @@ class Token {
         subtype && (this.subtype = subtype)
         typeof content !== "undefined" && (this.content = content)
         subtypeObject && (this.subtypeObject = subtypeObject)
+        this.init()
+        this.original = true
 
         Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(method => (method !== 'constructor')).forEach((method) => {
             this[method] = this[method].bind(this);
         });
+    }
+
+    /**
+     * @abstract
+     */
+    init() {
     }
 
     atLine(line) {
@@ -34,6 +43,12 @@ class Token {
         if (this.subtype) str += (this.type === "default" ? "" : "_") + this.subtype
         if (typeof this.content !== "undefined") str += (this.subtype === "" ? "'" : ":'") + this.content + "'"
         return str
+    }
+
+    switchTo(other) {
+        if (!(other instanceof Token)) throw new Error("Cannot switch token to non-token object")
+        for (var [key, val] of Object.entries(other)) this[key] = val
+        this.original = false
     }
 
     represent() {

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Comment Test</title>
+    <link href="../src/css/editor/SyntaxHighlighter.css" type="text/css" rel="stylesheet">
+    <link href="../src/css/editor/SplitScreen.css" type="text/css" rel="stylesheet">
+</head>
+<body class="split-screen">
+<pre class="left">a = 9
+## Test
+a = read(cell1, 0) ## Reads cell1
+
+
+##Test of multiline
+a = 9
+#* Test
+Test1*#
+a = read(cell1, 0) #*Reads cell1
+etc.*#</pre>
+<code class="right" style="transform: translate(0, 20px);">
+    <span style="color: cyan;">a</span><span>&nbsp;</span><span>=</span><span>&nbsp;</span><span style="color: blue;">9</span><span>\n</span><br><pre style="color: darkgray; margin: 0px;">## Test</pre><span style="color: cyan;">a</span><span>&nbsp;</span><span>=</span><span>&nbsp;</span><span style="font-style: italic;">read</span><span>(</span><span style="color: gray;">cell1</span><span>,</span><span>&nbsp;</span><span style="color: blue;">0</span><span>)</span><span>&nbsp;</span><pre style="color: red;margin: 0px;display: inline;">## Reads cell1</pre><span>\n</span><br><span>\n</span><br><span>\n</span><br><pre style="color: darkgray; margin: 0px;">##Test of multiline</pre><span style="color: cyan;">a</span><span>&nbsp;</span><span>=</span><span>&nbsp;</span><span style="color: blue;">9</span><pre style="color: lightgray; margin: 0px;">#* Test<span>\n</span><br>Test1*#</pre><span style="color: cyan;">a</span><span>&nbsp;</span><span>=</span><span>&nbsp;</span><span style="font-style: italic;">read</span><span>(</span><span style="color: gray;">cell1</span><span>,</span><span>&nbsp;</span><span style="color: blue;">0</span><span>)</span><span>&nbsp;</span><pre style="color: red;margin: 0px;display: inline;">#*Reads cell1<span>\n</span><br>etc.*#</pre>
+</code>
+</body>
+</html>

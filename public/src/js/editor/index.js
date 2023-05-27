@@ -5,13 +5,18 @@ var lexer = new MindustryLexer()
 var parser = new MindustryParser()
 var compiler = new MindustryCompiler()
 
-var highlighter = new SyntaxHighlighter("Mindustry", function () {
+var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
     // this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
     // this.editorElements.code.style.color = "blue"
 
-    function onError(msg, token) {
+    function onError(msg, token, src) {
+        if (src instanceof Parser && src.quietError) {
+            // console.log("Quiet error at line #", token?.lineNum + 1)
+            // this.rawSyntax(code, "magenta")
+            throw false
+        }
         console.warn("Error:", msg, "at token", token)
-        var lines = this.editorElements.input.value.replaceAll("\t", "<tab></tab>").split("\n")
+        var lines = this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\t", "<tab></tab>").split("\n")
         if (typeof token?.lineNum === "undefined" || token?.lineNum >= lines.length) throw true
         // console.log("ERROR", msg, token.lineNum, token, this)
         this.editorElements.code.style.color = "red"
@@ -55,14 +60,27 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
         var currentTokenIndex = 0
         var tokensFiltered = tokens.filter(a => !(a instanceof MindustryTokens.TAB || a instanceof MindustryTokens.NEWLINE))
         this.editorElements.code.innerHTML = ""
-        var srcText, cmd, property, value, style
+        var srcText, cmd, property, value, style, skipText = ""
         while (!lexer.text.almostDone && !lexer.tokenText.almostDone) {
             srcText = lexer.text.next
             cmd = lexer.tokenText.next
+            if (skipText) {
+                if (cmd !== "*" || srcText === "\n" || srcText === "\t") {
+                    var span = document.createElement("span")
+                    span.innerHTML = skipText.replaceAll("<", "&lt;")
+                    this.editorElements.code.appendChild(span)
+                    skipText = ""
+                }
+            }
             switch (cmd) {
                 case "+":
                     currentToken = tokensFiltered[currentTokenIndex++]
                     currentSpan = document.createElement(currentToken.type === "comment" ? "pre" : "span")
+                    if (currentToken.type === "comment") {
+                        lexer.text.undo(2)
+                        if (lexer.text.next !== "\n") currentSpan.style.display = "inline"
+                        lexer.text.next
+                    }
                     if (currentToken?.style) {
                         style = currentToken.style
                         var i = 1
@@ -79,51 +97,51 @@ var highlighter = new SyntaxHighlighter("Mindustry", function () {
                     this.editorElements.code.appendChild(currentSpan)
                 case "=": // Don't add break up there!!!
                     if (currentSpan) {
-                        if (currentToken.type === "comment") {
+                        if (currentToken?.type === "comment") {
                             currentSpan.innerHTML += srcText.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
-                        } else currentSpan.innerHTML += srcText
+                        } else currentSpan.innerHTML += srcText.replaceAll("<", "&lt;")
                     }
                     break
                 case "*":
-                    currentSpan = undefined
-                    currentToken = undefined
+                    // console.log(srcText === "\n" || srcText === "\t", srcText, tokensFiltered[currentTokenIndex])
                     if (srcText === "\n") {
-                        if (tokensFiltered[currentTokenIndex]?.type === "comment") break
+                        if (currentToken?.type === "comment" && currentSpan?.style?.display !== "inline") break
                         this.editorElements.code.appendChild(document.createElement("br"))
                         break
-                    } else if (srcText === "\t") {
+                    }
+                    currentSpan = undefined
+                    currentToken = undefined
+                    if (srcText === "\t") {
                         this.editorElements.code.appendChild(document.createElement("tab"))
                         break
-                    }
-                    var span = document.createElement("span")
-                    span.innerHTML = srcText
-                    this.editorElements.code.appendChild(span)
+                    } else if (srcText === " ") srcText = "&nbsp;"
+                    skipText += srcText
                     break
                 default:
                     throw new Error(`Command ${cmd} not recognized!`)
             }
+            // console.log(cmd, `'${srcText}'`, currentToken)
             // console.log(`${cmd} '${srcText}'`, currentSpan, currentToken)
             this.editorElements.code.style.removeProperty("color")
         }
     } catch (e) {
-        if (e.name) {
+        if (e?.name) {
             console.warn(e)
             this.editorElements.code.style.color = "red"
-            this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
+            this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
         }
     }
-}, function (code) {
-    this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${code.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
-    this.editorElements.code.style.color = "blue"
+}, function (code, color = "blue") {
+    this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${code.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
+    this.editorElements.code.style.color = color
 })
 document.body.classList.add("split-screen")
 var editor = highlighter.getEditor()
-// editor.innerHTML = "LEFT"
 editor.classList.add("left")
 document.body.appendChild(editor)
-// editor.style.height = "300px"
 var codeExamples = [
-    `a = rand 9
+    `## First code example, should cover most of MPPL capabilities
+a = rand 9
 c = 0 ## Default value
 @counter = 7
 if (a > 8){
@@ -142,7 +160,7 @@ draw.color(0, 0, 0, 255)
 draw.col(0)
 f = 0xff
 draw.col(%00ff00ff) ## %RRGGBBAA (hexadecimal)
-#*draw.stroke(0)
+draw.stroke(0)
 draw.line(0, 0, 0, 0)
 draw.rect(0, 0, 0, 0)
 draw.lineRect(0, 0, 0, 0)
@@ -208,7 +226,7 @@ result = uradar(enemy, any, any, distance)
 outX, outY, found = ulocate.ore(@copper)
 outX, outY, found, building = ulocate.building(core, true)
 outX, outY, found, building = ulocate.spawn()
-outX, outY, found, building = ulocate.damaged()*#`,
+outX, outY, found, building = ulocate.damaged()`,
     `a = 8 + 7
 #*AST should be:
         SET
@@ -264,12 +282,16 @@ while (i < 100){
     `control.enabled(press1, 0)`,
     `outX, outY, found = ulocate.ore(@copper)`,
     `a = rand 9
-b = max a
-c = a max b`
+b = 6 max a
+c = a max b`,
+    `result = read(cell1, 0)\nwrite(cell1, 0, result)`,
+    `a = 9\n## Test\na = read(cell1, 0) ## Reads cell1`,
+    `##Test of multiline\na = 9\n#* Test\nTest1*#\na = read(cell1, 0) #*Reads cell1\netc.*#`,
+    `##Fails, because floor is operator - fixed\noutX, outY, found, building = ulocate.damaged()\ntype, building, floor = ucontrol.getBlock(0, 0)`,
+    `result = a()\nb()`
 ]
-highlighter.editorElements.input.value = codeExamples[11]
+highlighter.editorElements.input.value = codeExamples[0]
 var blocksViewContainer = blocksView.getContainer()
-// blocksViewContainer.innerHTML = "RIGHT"
 blocksViewContainer.classList.add("right")
 document.body.appendChild(blocksViewContainer)
 
