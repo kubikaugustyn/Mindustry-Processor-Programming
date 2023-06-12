@@ -1,15 +1,12 @@
 var __author__ = "kubik.augustyn@post.cz"
 
 class ProcessorTypeValueRule {
-    constructor(...args) {
-        this.init(...args)
-    }
-
-    init() {
-    }
-
     isValid(value) {
         return true
+    }
+
+    toString() {
+        return "default rule"
     }
 }
 
@@ -18,7 +15,8 @@ class ProcessorTypeValueRules {
         min
         max
 
-        init(min, max) {
+        constructor(min, max) {
+            super();
             this.min = min
             this.max = max
         }
@@ -26,15 +24,27 @@ class ProcessorTypeValueRules {
         isValid(value) {
             return value >= this.min && value <= this.max
         }
+
+        toString() {
+            return `in range &lt;${this.min}; ${this.max}&gt;`
+        }
     }
     static INTEGER = class extends ProcessorTypeValueRule {
         isValid(value) {
             return Number.isInteger(value)
         }
+
+        toString() {
+            return `is integer`
+        }
     }
     static POSITIVE = class extends ProcessorTypeValueRule {
         isValid(value) {
             return value >= 0
+        }
+
+        toString() {
+            return `&gt;= 0`
         }
     }
 }
@@ -60,6 +70,10 @@ class ProcessorType {
     equals(other) {
         return this.constructor === other.constructor
     }
+
+    toString() {
+        return this.name.toUpperCase() + (this.rules ? " (" + this.rules.map(rule => rule.toString()).join(", ") + ")" : "")
+    }
 }
 
 class ProcessorTypes {
@@ -82,6 +96,7 @@ class ProcessorTypes {
         ]
     }
     static COLOR = class extends ProcessorType {
+        name = "color"
         rules = [
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.POSITIVE(),
@@ -156,8 +171,8 @@ class ProcessorTypes {
     static BUILDING = class extends ProcessorType {
         name = "building"
         properties = new Map([
-            ...ProcessorTypes.ALL_ITEMS.map(name => [name, "CONTENT"]),
-            ...ProcessorTypes.ALL_LIQUIDS.map(name => [name, "CONTENT"]),
+            ...ProcessorTypes.ALL_ITEMS.map(name => [name, "POSITIVE_INTEGER"]),
+            ...ProcessorTypes.ALL_LIQUIDS.map(name => [name, "POSITIVE_INTEGER"]),
             ["totalItems", "ITEMS_LIQUIDS_NUMBER"],
             ["firstItem", "CONTENT"],
             ["totalLiquids", "ITEMS_LIQUIDS_NUMBER"],

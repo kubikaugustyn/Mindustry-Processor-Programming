@@ -15,6 +15,9 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
             // this.rawSyntax(code, "magenta")
             throw false
         }
+        blocksView.setBlocks([])
+        blocksView.getBlocksContainer().style.color = "red"
+        blocksView.getBlocksContainer().innerHTML = msg
         console.warn("Error:", msg, "at token", token)
         var lines = this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\t", "<tab></tab>").split("\n")
         if (typeof token?.lineNum === "undefined" || token?.lineNum >= lines.length) throw true
@@ -37,7 +40,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
             !(token instanceof MindustryTokens.TAB || token instanceof MindustryTokens.COMMENT)
         ))
         if (tree) {
-            console.log(tree)
+            // console.log(tree)
             compiler.throwError = onError.bind(this)
             // Compile (Abstract Syntax Tree --> list of ProcessorBlock)
             var processorBlocks = compiler.recompile(tree)
@@ -159,7 +162,7 @@ draw.clear(0, 0, 0)
 draw.color(0, 0, 0, 255)
 draw.col(0)
 f = 0xff
-draw.col(%00ff00ff) ## %RRGGBBAA (hexadecimal)
+draw.col(0c00ff00ff) ## %RRGGBBAA (hexadecimal)
 draw.stroke(0)
 draw.line(0, 0, 0, 0)
 draw.rect(0, 0, 0, 0)
@@ -288,11 +291,16 @@ c = a max b`,
     `a = 9\n## Test\na = read(cell1, 0) ## Reads cell1`,
     `##Test of multiline\na = 9\n#* Test\nTest1*#\na = read(cell1, 0) #*Reads cell1\netc.*#`,
     `##Fails, because floor is operator - fixed\noutX, outY, found, building = ulocate.damaged()\ntype, building, floor = ucontrol.getBlock(0, 0)`,
-    `result = a()\nb()`
+    `result = a()\nb()`,
+    "a = 8 + 7 * 3 % (@j of @k)",
+    "a = 0caabbccdd",
+    "## Store a and b into c\na = 123 ## 8 bits\nb = 231 ## 8 bits\nc = a << 8 + b\nwrite(cell1, 0, c)\n\n## Back\nc = read(cell1, 0)\nb = c b-and 0xFF\na = (c >> 8) b-and 0xFF"
 ]
-highlighter.editorElements.input.value = codeExamples[0]
+highlighter.editorElements.input.value = codeExamples[19]
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")
+blocksViewContainer.style.height = "calc(100vh - 21px)"
+blocksViewContainer.style.width = "calc(50vw - 20px)"
 document.body.appendChild(blocksViewContainer)
 
 var clearDiv = document.createElement("div")

@@ -6,7 +6,7 @@ class MindustryLexer extends Lexer {
     static DIGITS = "0123456789"
     static HEX_DIGITS = "0123456789abcdef"
     static HEX_ANNOTATION = "0x" // 0xff
-    static COLOR_ANNOTATION = "%" // %00ff00ff
+    static COLOR_ANNOTATION = "0c" // %00ff00ff
     static DIGITS_SEP = "." // 5.2
     static DIGITS_POWER = "E" // 6.8E10 to 68000000000 (6.8 * 10^10)
     static SPACE = " " // Character considered space
@@ -53,6 +53,10 @@ class MindustryLexer extends Lexer {
          */
         type
         /**
+         * @type {string}
+         */
+        processorString
+        /**
          * @type {boolean}
          */
         has2inputs
@@ -68,6 +72,11 @@ class MindustryLexer extends Lexer {
             this.precedence = precedence
         }
 
+        proc(processorString) {
+            if (processorString) this.processorString = processorString
+            return this
+        }
+
         startsWith(char) {
             return this.chars.startsWith(char)
         }
@@ -79,46 +88,46 @@ class MindustryLexer extends Lexer {
     }
     static COUNT_OPERATORS = (operators, start) => operators.reduce((prev, curr) => prev + Number(curr.startsWith(start)), 0)
     static OPERATORS = [// Character considered operators
-        new MindustryLexer.OPERATOR("+", "plus").prec(20),
-        new MindustryLexer.OPERATOR("-", "minus").prec(20),
-        new MindustryLexer.OPERATOR("*", "multiply").prec(10),
-        new MindustryLexer.OPERATOR("/", "divide").prec(10),
-        new MindustryLexer.OPERATOR("//", "integer-divide"),
-        new MindustryLexer.OPERATOR("%", "modulo").prec(10),
-        new MindustryLexer.OPERATOR("^", "power"),
-        new MindustryLexer.OPERATOR("==", "equal").prec(40),
-        new MindustryLexer.OPERATOR("not", "not-equal").prec(40),
-        new MindustryLexer.OPERATOR("and", "logical-AND"),
-        new MindustryLexer.OPERATOR("<", "smaller").prec(40),
-        new MindustryLexer.OPERATOR("<=", "smaller-equal").prec(40),
-        new MindustryLexer.OPERATOR(">", "greater").prec(40),
-        new MindustryLexer.OPERATOR(">=", "greater-equal").prec(40),
-        new MindustryLexer.OPERATOR("===", "strict-equal").prec(40),
-        new MindustryLexer.OPERATOR("<<", "left-bitshift"),
-        new MindustryLexer.OPERATOR(">>", "right-bitshift"),
-        new MindustryLexer.OPERATOR("or", "bitwise-OR"),
-        new MindustryLexer.OPERATOR("b-and", "bitwise-AND"),
-        new MindustryLexer.OPERATOR("xor", "bitwise-XOR"),
-        new MindustryLexer.OPERATOR("flip", "bitwise-flip", false),
-        new MindustryLexer.OPERATOR("max", "maximum"),
-        new MindustryLexer.OPERATOR("min", "minimum"),
-        new MindustryLexer.OPERATOR("angle", "angle-vector"),
-        new MindustryLexer.OPERATOR("len", "len-vector"),
-        new MindustryLexer.OPERATOR("noise", "simplex-noise"),
-        new MindustryLexer.OPERATOR("abs", "absolute", false),
-        new MindustryLexer.OPERATOR("log", "natural-logarithm", false),
-        new MindustryLexer.OPERATOR("log10", "base10-logarithm", false),
-        new MindustryLexer.OPERATOR("floor", "floor", false),
-        new MindustryLexer.OPERATOR("ceil", "ceil", false),
-        new MindustryLexer.OPERATOR("sqrt", "square-root", false),
-        new MindustryLexer.OPERATOR("rand", "random", false),
-        new MindustryLexer.OPERATOR("sin", "sine", false),
-        new MindustryLexer.OPERATOR("cos", "cosine", false),
-        new MindustryLexer.OPERATOR("tan", "tangent", false),
-        new MindustryLexer.OPERATOR("asn", "arc-sine", false),
-        new MindustryLexer.OPERATOR("acos", "arc-cosine", false),
-        new MindustryLexer.OPERATOR("atan", "arc-tangent", false),
-        new MindustryLexer.OPERATOR("of", "of") // Custom, @maxItems of smelter1
+        new MindustryLexer.OPERATOR("+", "plus").prec(20).proc("add"),
+        new MindustryLexer.OPERATOR("-", "minus").prec(20).proc("sub"),
+        new MindustryLexer.OPERATOR("*", "multiply").prec(10).proc("mul"),
+        new MindustryLexer.OPERATOR("/", "divide").prec(10).proc("div"),
+        new MindustryLexer.OPERATOR("//", "integer-divide").proc("idiv"),
+        new MindustryLexer.OPERATOR("%", "modulo").prec(10).proc("mod"),
+        new MindustryLexer.OPERATOR("^", "power").proc("pow"),
+        new MindustryLexer.OPERATOR("==", "equal").prec(40).proc("equal"),
+        new MindustryLexer.OPERATOR("not", "not-equal").prec(40).proc("notEqual"),
+        new MindustryLexer.OPERATOR("and", "logical-AND").proc("land"),
+        new MindustryLexer.OPERATOR("<", "smaller").prec(40).proc("lessThan"),
+        new MindustryLexer.OPERATOR("<=", "smaller-equal").prec(40).proc("lessThanEq"),
+        new MindustryLexer.OPERATOR(">", "greater").prec(40).proc("greaterThan"),
+        new MindustryLexer.OPERATOR(">=", "greater-equal").prec(40).proc("greaterThanEq"),
+        new MindustryLexer.OPERATOR("===", "strict-equal").prec(40).proc("strictEqual"),
+        new MindustryLexer.OPERATOR("<<", "left-bitshift").proc("shl"),
+        new MindustryLexer.OPERATOR(">>", "right-bitshift").proc("shr"),
+        new MindustryLexer.OPERATOR("or", "bitwise-OR").proc("or"),
+        new MindustryLexer.OPERATOR("b-and", "bitwise-AND").proc("and"),
+        new MindustryLexer.OPERATOR("xor", "bitwise-XOR").proc("xor"),
+        new MindustryLexer.OPERATOR("flip", "bitwise-flip", false).proc("not"),
+        new MindustryLexer.OPERATOR("max", "maximum").proc("max"),
+        new MindustryLexer.OPERATOR("min", "minimum").proc("min"),
+        new MindustryLexer.OPERATOR("angle", "angle-vector").proc("angle"),
+        new MindustryLexer.OPERATOR("len", "len-vector").proc("len"),
+        new MindustryLexer.OPERATOR("noise", "simplex-noise").proc("noise"),
+        new MindustryLexer.OPERATOR("abs", "absolute", false).proc("abs"),
+        new MindustryLexer.OPERATOR("log", "natural-logarithm", false).proc("log"),
+        new MindustryLexer.OPERATOR("log10", "base10-logarithm", false).proc("log10"),
+        new MindustryLexer.OPERATOR("floor", "floor", false).proc("floor"),
+        new MindustryLexer.OPERATOR("ceil", "ceil", false).proc("ceil"),
+        new MindustryLexer.OPERATOR("sqrt", "square-root", false).proc("sqrt"),
+        new MindustryLexer.OPERATOR("rand", "random", false).proc("rand"),
+        new MindustryLexer.OPERATOR("sin", "sine", false).proc("sin"),
+        new MindustryLexer.OPERATOR("cos", "cosine", false).proc("cos"),
+        new MindustryLexer.OPERATOR("tan", "tangent", false).proc("tan"),
+        new MindustryLexer.OPERATOR("asn", "arc-sine", false).proc("asin"),
+        new MindustryLexer.OPERATOR("acos", "arc-cosine", false).proc("acos"),
+        new MindustryLexer.OPERATOR("atan", "arc-tangent", false).proc("atan"),
+        new MindustryLexer.OPERATOR("of", "of").prec(10) // Custom, @maxItems of smelter1
     ]
     static SET_OP = new MindustryLexer.OPERATOR("=", "set").prec(Infinity);
     static BOOLEAN = ["true", "false"]
@@ -149,10 +158,10 @@ class MindustryLexer extends Lexer {
         if (phrase.includes(MindustryLexer.PARAM_PHRASE_PREFIX)) {
             return /^[a-zA-Z0-9.-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)
         }
-        return /^[a-zA-Z0-9.-]+$/.test(phrase)
+        return /^[a-zA-Z0-9.-_]+$/.test(phrase)
     }
     static VALIDATE_PHRASE_CHAR = function (char) {
-        return /[a-zA-Z0-9.@-]/.test(char)
+        return /[a-zA-Z0-9.@-_]/.test(char)
     };
 
     * generateTokens() {
@@ -178,8 +187,6 @@ class MindustryLexer extends Lexer {
                 }
             } else if (this.currentChar === MindustryLexer.DIGITS_SEP || MindustryLexer.DIGITS.includes(this.currentChar)) {
                 yield this.generateNumber()
-            } else if (this.currentChar === MindustryLexer.COLOR_ANNOTATION) {
-                yield this.generateColor()
             } else if (MindustryLexer.OPERATORS.find(op => op.startsWith(this.currentChar))) {
                 [operator, countSkip] = this.generateToSpaceOrToken()
                 var operatorObject = MindustryLexer.OPERATORS.find(op => op.chars === operator)
@@ -293,13 +300,15 @@ class MindustryLexer extends Lexer {
         var decimal_point_count = 0
         var number_str = this.currentChar
         var isHex = false
+        var isColor = false
         this.advance()
         this.nextToken()
 
         while (!this.text.done && (
             (isHex ? false : this.currentChar === MindustryLexer.DIGITS_SEP) ||
-            (isHex ? MindustryLexer.HEX_DIGITS : MindustryLexer.DIGITS).includes(this.currentChar) ||
-            (isHex ? false : this.currentChar === MindustryLexer.HEX_ANNOTATION[1])
+            (isHex ? MindustryLexer.HEX_DIGITS : MindustryLexer.DIGITS).includes(this.currentChar.toLowerCase()) ||
+            (isHex ? false : this.currentChar === MindustryLexer.HEX_ANNOTATION[1]) ||
+            (isHex ? false : this.currentChar === MindustryLexer.COLOR_ANNOTATION[1])
         )) {
             if (this.currentChar === MindustryLexer.DIGITS_SEP) {
                 decimal_point_count++
@@ -310,7 +319,8 @@ class MindustryLexer extends Lexer {
             this.advance()
             this.keepToken()
 
-            if (number_str === MindustryLexer.HEX_ANNOTATION) isHex = true
+            if (number_str === MindustryLexer.HEX_ANNOTATION || number_str === MindustryLexer.COLOR_ANNOTATION) isHex = true
+            if (number_str === MindustryLexer.COLOR_ANNOTATION) isColor = true
         }
 
         if (number_str.startsWith(MindustryLexer.DIGITS_SEP)) number_str = MindustryLexer.DIGITS[0] + number_str
@@ -322,21 +332,8 @@ class MindustryLexer extends Lexer {
             var to_power_of_ten = Number(this.generateNumber().content)
             value = value * (10 ** to_power_of_ten)
         }
-        return this.createToken(MindustryTokens.VALUE, isHex ? "hex-number" : "number", value)
-    }
-
-    generateColor() {
-        var color_str = this.currentChar
-        this.advance()
-        this.nextToken()
-
-        while (!this.text.done && MindustryLexer.HEX_DIGITS.includes(this.currentChar)) {
-            color_str += this.currentChar
-            this.advance()
-            this.keepToken()
-        }
-
-        return this.createToken(MindustryTokens.VALUE, (color_str.length === 9) ? "color" : "color-invalid", color_str)
+        return isColor ? this.createToken(MindustryTokens.VALUE, (number_str.length === 10) ? "color" : "color-invalid", number_str) :
+            this.createToken(MindustryTokens.VALUE, isHex ? "hex-number" : "number", value)
     }
 
     generateNewline() {

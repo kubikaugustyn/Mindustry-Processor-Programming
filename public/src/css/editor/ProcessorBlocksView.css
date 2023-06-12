@@ -14,12 +14,6 @@
     content: "Copy to clipboard";
 }
 
-.processor-blocks .container {
-    overflow-y: scroll;
-    height: calc(100% - 35px);
-    margin-top: 5px;
-}
-
 .processor-block.category-input-output {
     --categoryColor: rgb(160, 138, 138);
 }

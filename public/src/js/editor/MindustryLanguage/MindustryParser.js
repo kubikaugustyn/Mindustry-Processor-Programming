@@ -14,6 +14,7 @@ class MindustryParser extends Parser {
     static OPNode = "OPNode"
     static PHRASENode = "PHRASENode"
     static NUMBERNode = "NUMBERNode"
+    static STRINGNode = "STRINGNode"
     static KEYWORDNode = "KEYWORDNode"
 
     static KEYWORDS = {
@@ -45,7 +46,6 @@ class MindustryParser extends Parser {
         if (i >= limit) console.log("Reached limit")
 
         if (!result) this.handleError()
-        result.setFree()
         return result
     }
 
@@ -223,6 +223,7 @@ class MindustryParser extends Parser {
                 try {
                     left = this.parseNonOPBeginning(ast, numOpenParens)
                 } catch {
+                    this.setQuietError(false)
                     this.tokens.setState(state)
                     left = this.parsePhrase(ast, numOpenParens)
                 }
@@ -239,6 +240,12 @@ class MindustryParser extends Parser {
 
         //GET OP TOKEN:
         var opNode = this.getOPNode(ast, numOpenParens, left || null)
+        if (opNode.type === MindustryParser.SETNode && beginningOfLine) {
+            opNode.op.inParens = false
+            opNode.op.left = left
+            opNode.op.right = this.parseStatement(ast, numOpenParens)
+            return this.addNode(ast, opNode)
+        }
 
         //GET RIGHT TOKEN:
         if (!(this.currentToken instanceof MindustryTokens.OPERATOR)) right = this.parseNonOP(ast, numOpenParens)
@@ -298,6 +305,7 @@ class MindustryParser extends Parser {
                 this.currentToken.switchTo(newPhrase)
             }
             varNode.phrase.names.push(this.currentToken.content)
+            if (this.currentToken.content.startsWith("tmp_")) this.currentToken.subtype = "invalid"
             this.advance()
             if (this.currentToken instanceof MindustryTokens.SET) break
             else if (this.currentToken instanceof MindustryTokens.OPERATOR) this.handleError(MindustryParser.ERROR_UNEXPECTED_OPERATOR, this.currentToken)
@@ -411,13 +419,17 @@ class MindustryParser extends Parser {
         this.advance()
 
         //NUMBER:
-        if (token instanceof MindustryTokens.VALUE && token.subtype === "number") return this.getNumberNode(ast, numOpenParens, token)
+        if (token instanceof MindustryTokens.VALUE) {
+            if (token.subtype === "number" || token.subtype === "hex-number" || token.subtype === "color") return this.getNumberNode(ast, numOpenParens, token)
+            if (token.subtype === "string") return this.getStringNode(ast, numOpenParens, token)
+        }
 
         //VARIABLE:
         var varNode = new Parser.ASTNode
         varNode.type = MindustryParser.PHRASENode
         varNode.lineNum = this.tokens.lastPreview.lineNum
         varNode.phrase = {type: "VAR", name: this.tokens.lastPreview.content}
+        if (this.tokens.lastPreview.content.startsWith("tmp_")) this.tokens.lastPreview.subtype = "invalid"
 
         //index into variable:
         // NOT DOING THAT
@@ -447,8 +459,16 @@ class MindustryParser extends Parser {
         var numNode = new Parser.ASTNode
         numNode.type = MindustryParser.NUMBERNode
         numNode.lineNum = this.tokens.lastPreview.lineNum
-        numNode.literal = {value: token.content}
+        numNode.literal = {value: token.content, type: token.subtype}
         return this.addNode(ast, numNode)
+    }
+
+    getStringNode(ast, numOpenParens, token) {
+        var strNode = new Parser.ASTNode
+        strNode.type = MindustryParser.STRINGNode
+        strNode.lineNum = this.tokens.lastPreview.lineNum
+        strNode.literal = {value: token.content}
+        return this.addNode(ast, strNode)
     }
 
     getOPNode(ast, numOpenParens, leftNode) {
@@ -460,6 +480,7 @@ class MindustryParser extends Parser {
         opNode.op = {}
         if (this.currentToken instanceof MindustryTokens.SET) {
             opNode.type = MindustryParser.SETNode
+            opNode.op.type = MindustryLexer.SET_OP
             opNode.set = opNode.op
         } else {
             opNode.type = MindustryParser.OPNode
@@ -489,7 +510,8 @@ class MindustryParser extends Parser {
     }
 
     precedence(op) {
-        return op.precedence / 10
+        // console.warn(op.type.precedence / 10)
+        return op.type.precedence / 10
     }
 
     forcePhrase(token) {

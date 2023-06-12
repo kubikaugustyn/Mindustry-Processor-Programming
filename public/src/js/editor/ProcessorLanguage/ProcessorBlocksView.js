@@ -33,8 +33,6 @@ class ProcessorBlocksView {
     constructor(container = null, copyButton = null) {
         this.container = container || document.createElement("div")
         this.container.classList.add("processor-blocks")
-        this.container.style.height = "calc(100vh - 21px)"
-        this.container.style.width = "calc(50vw - 20px)"
         this.blocksContainer = document.createElement("div")
         this.blocksContainer.classList.add("container")
         this.copyElement = document.createElement("textarea")
@@ -60,6 +58,13 @@ class ProcessorBlocksView {
      */
     getContainer() {
         return this.container
+    }
+
+    /**
+     * @returns {HTMLDivElement}
+     */
+    getBlocksContainer() {
+        return this.blocksContainer
     }
 
     /**

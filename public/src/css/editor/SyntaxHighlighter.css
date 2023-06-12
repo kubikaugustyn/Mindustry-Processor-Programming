@@ -12,6 +12,12 @@ tab {
     display: inline-block;
 }
 
+.processor-blocks .container {
+    overflow-y: scroll;
+    height: calc(100% - 35px);
+    margin-top: 5px;
+}
+
 .line-numbers {
     line-height: 20pt;
     width: fit-content;
