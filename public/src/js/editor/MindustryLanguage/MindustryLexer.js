@@ -154,14 +154,18 @@ class MindustryLexer extends Lexer {
         "ulocate.ore", "ulocate.building", "ulocate.spawn", "ulocate.damaged"
     ]*/
     static PARAM_PHRASE_PREFIX = "@"
+    static LABEL_PHRASE_PREFIX = ":"
     static VALIDATE_PHRASE = function (phrase) {
         if (phrase.includes(MindustryLexer.PARAM_PHRASE_PREFIX)) {
             return /^[a-zA-Z0-9.-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)
         }
+        if (phrase.includes(MindustryLexer.LABEL_PHRASE_PREFIX)) {
+            return /^[a-zA-Z0-9.-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)
+        }
         return /^[a-zA-Z0-9.-_]+$/.test(phrase)
     }
     static VALIDATE_PHRASE_CHAR = function (char) {
-        return /[a-zA-Z0-9.@-_]/.test(char)
+        return /[a-zA-Z0-9.@-_]/.test(char) || MindustryLexer.PARAM_PHRASE_PREFIX.includes(char) || MindustryLexer.LABEL_PHRASE_PREFIX.includes(char)
     };
 
     * generateTokens() {
@@ -246,6 +250,7 @@ class MindustryLexer extends Lexer {
                 }
                 // if (!MindustryLexer.VALIDATE_PHRASE(phrase)) throw new Error(`Illegal non-alphanumeric or @ or . character in '${phrase}' phrase.`)
                 if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "param", phrase)
+                else if (phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "label", phrase)
                 else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, "boolean", phrase)
                 // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, "", phrase)
                 else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield this.createToken(MindustryTokens.PHRASE, "link", phrase)
@@ -296,13 +301,13 @@ class MindustryLexer extends Lexer {
         return num
     }
 
-    generateNumber() {
+    generateNumber(nextToken = true) {
         var decimal_point_count = 0
         var number_str = this.currentChar
         var isHex = false
         var isColor = false
         this.advance()
-        this.nextToken()
+        nextToken ? this.nextToken() : this.keepToken()
 
         while (!this.text.done && (
             (isHex ? false : this.currentChar === MindustryLexer.DIGITS_SEP) ||
@@ -329,7 +334,7 @@ class MindustryLexer extends Lexer {
         if (!isHex && this.currentChar === MindustryLexer.DIGITS_POWER) { // 6.8E10 to 68000000000 (6.8 * 10^10)
             this.advance()
             this.keepToken()
-            var to_power_of_ten = Number(this.generateNumber().content)
+            var to_power_of_ten = Number(this.generateNumber(false).content)
             value = value * (10 ** to_power_of_ten)
         }
         return isColor ? this.createToken(MindustryTokens.VALUE, (number_str.length === 10) ? "color" : "color-invalid", number_str) :

@@ -58,6 +58,17 @@ class MindustryCompiler extends Compiler {
          */
         val
     }
+    // Used mainly in jump commands
+    static DynamicLink = class DynamicLink {
+        /**
+         * @type {ProcessorBlock}
+         */
+        target
+
+        toString() {
+            return `DynamicLink to "${this.target.toString()}"`
+        }
+    }
 
     static RuntimeError = class RuntimeError {
         static INVALID_ASSIGNMENT = "INVALID_ASSIGNMENT"
@@ -108,6 +119,16 @@ class MindustryCompiler extends Compiler {
     static returnFlag = false
     static breakFlag = false
     static continueFlag = false
+    static OPtoJUMP = new Map([
+        [MindustryLexer.OPERATORS[7], "equal"],
+        [MindustryLexer.OPERATORS[8], "notEqual"],
+        [MindustryLexer.OPERATORS[10], "lessThan"],
+        [MindustryLexer.OPERATORS[11], "lessThanEq"],
+        [MindustryLexer.OPERATORS[12], "greaterThan"],
+        [MindustryLexer.OPERATORS[13], "greaterThanEq"],
+        [MindustryLexer.OPERATORS[14], "strictEqual"],
+        ["*", "always"]
+    ])
 
     static OBFUSCATE = true
 
@@ -244,12 +265,13 @@ class MindustryCompiler extends Compiler {
     /**
      * @param ast {AST}
      * @param nodes {number[]}
+     * @param addedFuncs {string[], undefined}
+     * @param addedVars {string[], undefined}
      */
-    compileStatements(ast, nodes) {
-        /**
-         * @type {string[]}
-         */
-        var addedFuncs = [], addedVars = []
+    compileStatements(ast, nodes, addedFuncs = undefined, addedVars = undefined) {
+        var del = arguments.length === 2
+        addedFuncs = addedFuncs || []
+        addedVars = addedVars || []
 
         for (var i = 0; i < nodes.length; i++) {
             this.compileStatement(ast, ast.nodePool[nodes[i]], addedFuncs, addedVars)
@@ -257,8 +279,10 @@ class MindustryCompiler extends Compiler {
             if (MindustryCompiler.returnFlag || MindustryCompiler.breakFlag || MindustryCompiler.continueFlag) break
         }
 
-        for (i = 0; i < addedFuncs.length; i++) MindustryCompiler.functions.delete(addedFuncs[i]);
-        for (i = 0; i < addedVars.length; i++) MindustryCompiler.variables.delete(addedVars[i]);
+        if (del) {
+            for (i = 0; i < addedFuncs.length; i++) MindustryCompiler.functions.delete(addedFuncs[i]);
+            for (i = 0; i < addedVars.length; i++) MindustryCompiler.variables.delete(addedVars[i]);
+        }
     }
 
     nodeToString(ast, node, addedFuncs, addedVars) {
@@ -280,14 +304,15 @@ class MindustryCompiler extends Compiler {
      */
     compileStatement(ast, node, addedFuncs, addedVars, name = undefined) {
         // console.log(node)
+        var left, right
         switch (node.type) {
             case MindustryParser.SETNode:
                 return this.equal(ast, ast.nodePool[node.set.left], ast.nodePool[node.set.right], addedFuncs, addedVars)
             case MindustryParser.OPNode:
                 var lNode = ast.nodePool[node.op.left]
                 var rNode = ast.nodePool[node.op.right]
-                if (node.op.type.has2inputs) var left = this.nodeToString(ast, lNode, addedFuncs, addedVars)
-                var right = this.nodeToString(ast, rNode, addedFuncs, addedVars)
+                if (node.op.type.has2inputs) left = this.nodeToString(ast, lNode, addedFuncs, addedVars)
+                right = this.nodeToString(ast, rNode, addedFuncs, addedVars)
 
 
                 name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
@@ -311,10 +336,42 @@ class MindustryCompiler extends Compiler {
                 } else console.log("Phrase:", node)
                 break
             case MindustryParser.NUMBERNode:
-                name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
-                this.block(ProcessorTokens.SET, name, this.getNumberValue(node))
+                //name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
+                //this.block(ProcessorTokens.SET, name, this.getNumberValue(node))
+                name = this.getNumberValue(node)
                 break
             case MindustryParser.KEYWORDNode:
+                if (node.keyword.type === "IF") {
+                    /*
+                    Structure:
+                    JUMP to ifCode
+                    <elseCode>
+                    JUMP always endOfIf
+                    <ifCode>
+                    <endOfIf|otherBlock>
+                     */
+                    console.log(node.keyword)
+                    var condition = ast.nodePool[node.keyword.condition].op
+                    console.log("IF:", condition)
+                    var jmpType = MindustryCompiler.OPtoJUMP.get(condition.type)
+                    if (typeof jmpType === "undefined") {
+                        left = this.compileStatement(ast, ast.nodePool[node.keyword.condition], addedFuncs, addedVars)
+                        right = 0
+                        jmpType = "notEqual"
+                    } else {
+                        left = this.compileStatement(ast, ast.nodePool[condition.left], addedFuncs, addedVars)
+                        right = this.compileStatement(ast, ast.nodePool[condition.right], addedFuncs, addedVars)
+                    }
+                    this.block(ProcessorTokens.JUMP, "?", jmpType, left, right) // Jump to ifCode
+                    // this.compileStatements(ast, node.keyword) // Else code
+                    // TODO
+                    console.group("Only if")
+                    console.log("Left:", left, ast.nodePool[condition.left])
+                    console.log("OP:", jmpType)
+                    console.log("Right:", right, ast.nodePool[condition.right])
+                    console.groupEnd()
+                    console.log(this.variable(ProcessorTypes.BOOLEAN, addedVars, name))
+                } else console.log("Keyword:", node)
                 break
             default:
                 this.error(MindustryCompiler.RuntimeError.UNSUPPORTED_NODE_TYPE, node)
@@ -375,8 +432,6 @@ class MindustryCompiler extends Compiler {
         }
     }
 
-    // SOME STUFF
-
     /**
      * @param ast {AST}
      * @param varNode {ASTNode}
@@ -396,9 +451,31 @@ class MindustryCompiler extends Compiler {
         else this.compileStatement(ast, valNode, addedFuncs, addedVars, varNode.phrase.name)
     }
 
+    /**
+     * @param ast {AST}
+     * @param varNode {ASTNode}
+     * @param valNode {ASTNode}
+     * @param addedFuncs {string[]}
+     * @param addedVars {string[]}
+     * @returns {string}
+     */
+    jump(ast, varNode, valNode, addedFuncs, addedVars) {
+        // TODO
+        // MindustryCompiler.OPtoJUMP
+        // console.log(...arguments)
+        if (varNode.type !== MindustryParser.PHRASENode || (varNode.phrase.type !== "VAR" && varNode.phrase.type !== "MULTI-VAR")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
+
+        //this.block(ProcessorTokens.SET, varNode.phrase.name, valNode)
+        if (varNode.phrase.type !== "VAR" && (valNode.type !== MindustryParser.PHRASENode || valNode.phrase.type !== "FUNC")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
+        if (varNode.phrase.type === "VAR" && valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "VAR") this.block(ProcessorTokens.SET, varNode.phrase.name, valNode.phrase.name)
+        else if (valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "FUNC") this.compileFunctionCall(ast, valNode, addedFuncs, addedVars, varNode.phrase.name || varNode.phrase.names)
+        else this.compileStatement(ast, valNode, addedFuncs, addedVars, varNode.phrase.name)
+    }
+
     error(error, errorNode) {
         MindustryCompiler.error = error
         MindustryCompiler.errorNode = errorNode
+        console.log("Error", ...arguments)
         throw error
     }
 

@@ -18,7 +18,7 @@ class MindustryParser extends Parser {
     static KEYWORDNode = "KEYWORDNode"
 
     static KEYWORDS = {
-        flow: ["if", "for", "while"],
+        flow: ["if", "while"],
         else: "else",
         func: ["function", "subroutine"],
         return: "return",
@@ -101,13 +101,13 @@ class MindustryParser extends Parser {
                     this.removeNewline()
 
                     while (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[5])) {
-                        controlNode.keyword.elseCode.push(this.parseStatement(ast, numOpenParens))
+                        controlNode.keyword.elseCode.push(this.parseStatement(ast, numOpenParens, true))
                         this.removeNewline()
                     }
 
                     this.advance()
                 } else //single-line / else-if
-                    controlNode.keyword.elseCode.push(this.parseStatement(ast, numOpenParens))
+                    controlNode.keyword.elseCode.push(this.parseStatement(ast, numOpenParens, true))
             } else controlNode.keyword.hasElse = false
 
             return this.addNode(ast, controlNode)
@@ -162,7 +162,7 @@ class MindustryParser extends Parser {
             this.removeNewline()
 
             while (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[5])) {
-                funcNode.keyword.code.push(this.parseStatement(ast, numOpenParens))
+                funcNode.keyword.code.push(this.parseStatement(ast, numOpenParens, true))
                 this.removeNewline()
             }
 
@@ -226,6 +226,8 @@ class MindustryParser extends Parser {
                     this.setQuietError(false)
                     this.tokens.setState(state)
                     left = this.parsePhrase(ast, numOpenParens)
+                } finally {
+                    this.setQuietError(false)
                 }
             } else left = this.parseNonOP(ast, numOpenParens)
         }
@@ -239,7 +241,7 @@ class MindustryParser extends Parser {
         ) || this.currentToken instanceof MindustryTokens.COMMA || this.tokens.done) return left
 
         //GET OP TOKEN:
-        var opNode = this.getOPNode(ast, numOpenParens, left || null)
+        var opNode = this.getOPNode(ast, numOpenParens, typeof left === "undefined" ? null : left)
         if (opNode.type === MindustryParser.SETNode && beginningOfLine) {
             opNode.op.inParens = false
             opNode.op.left = left
@@ -336,7 +338,8 @@ class MindustryParser extends Parser {
         this.advance()
         var node = this.parseStatement(ast, numOpenParens)
         if (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[1])) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN)
-        ast.nodePool[node].op.inParens = true
+        //console.log("Statement in parens, node:", ast.nodePool[node])
+        if (ast.nodePool[node].type === MindustryParser.OPNode || ast.nodePool[node].type === MindustryParser.SETNode) ast.nodePool[node].op.inParens = true
 
         numOpenParens.sub()
         this.advance()
@@ -425,6 +428,7 @@ class MindustryParser extends Parser {
         }
 
         //VARIABLE:
+        if (!this.tokens.lastPreview) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.tokens.lastValid)
         var varNode = new Parser.ASTNode
         varNode.type = MindustryParser.PHRASENode
         varNode.lineNum = this.tokens.lastPreview.lineNum
@@ -485,6 +489,7 @@ class MindustryParser extends Parser {
         } else {
             opNode.type = MindustryParser.OPNode
             opNode.op.type = this.currentToken.subtypeObject
+            // console.log(this.currentToken, this.currentToken.subtypeObject.has2inputs, leftNode, ast.nodePool[leftNode])
             if (this.currentToken.subtypeObject.has2inputs ^ (leftNode !== null)) this.handleError(MindustryParser.ERROR_INVALID_OPERATOR, this.currentToken)
         }
 
@@ -518,6 +523,6 @@ class MindustryParser extends Parser {
         if (!(token instanceof MindustryTokens.PHRASE)) this.handleError(MindustryParser.ERROR_UNEXPECTED_OPERATOR, token)
         Object.values(MindustryParser.KEYWORDS).forEach(function (keywords) {
             if (keywords.includes(token.content)) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, token)
-        })
+        }, this)
     }
 }

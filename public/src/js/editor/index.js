@@ -5,19 +5,24 @@ var lexer = new MindustryLexer()
 var parser = new MindustryParser()
 var compiler = new MindustryCompiler()
 
+function blocksContainerError(msg) {
+    blocksView.setBlocks([])
+    blocksView.getBlocksContainer().style.color = "red"
+    blocksView.getBlocksContainer().innerHTML = msg
+}
+
 var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
     // this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
     // this.editorElements.code.style.color = "blue"
 
     function onError(msg, token, src) {
+        //console.warn("onError", ...arguments)
         if (src instanceof Parser && src.quietError) {
             // console.log("Quiet error at line #", token?.lineNum + 1)
             // this.rawSyntax(code, "magenta")
             throw false
         }
-        blocksView.setBlocks([])
-        blocksView.getBlocksContainer().style.color = "red"
-        blocksView.getBlocksContainer().innerHTML = msg
+        blocksContainerError(msg)
         console.warn("Error:", msg, "at token", token)
         var lines = this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\t", "<tab></tab>").split("\n")
         if (typeof token?.lineNum === "undefined" || token?.lineNum >= lines.length) throw true
@@ -78,7 +83,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
             switch (cmd) {
                 case "+":
                     currentToken = tokensFiltered[currentTokenIndex++]
-                    currentSpan = document.createElement(currentToken.type === "comment" ? "pre" : "span")
+                    currentSpan = document.createElement(currentToken?.type === "comment" ? "pre" : "span")
                     if (currentToken.type === "comment") {
                         lexer.text.undo(2)
                         if (lexer.text.next !== "\n") currentSpan.style.display = "inline"
@@ -129,7 +134,9 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
         }
     } catch (e) {
         if (e?.name) {
+            if (e?.token) onError(e, e.token)
             console.warn(e)
+            blocksContainerError(e)
             this.editorElements.code.style.color = "red"
             this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
         }
@@ -142,6 +149,7 @@ document.body.classList.add("split-screen")
 var editor = highlighter.getEditor()
 editor.classList.add("left")
 document.body.appendChild(editor)
+// TODO load from /examples/examples.json
 var codeExamples = [
     `## First code example, should cover most of MPPL capabilities
 a = rand 9
@@ -294,9 +302,10 @@ c = a max b`,
     `result = a()\nb()`,
     "a = 8 + 7 * 3 % (@j of @k)",
     "a = 0caabbccdd",
-    "## Store a and b into c\na = 123 ## 8 bits\nb = 231 ## 8 bits\nc = a << 8 + b\nwrite(cell1, 0, c)\n\n## Back\nc = read(cell1, 0)\nb = c b-and 0xFF\na = (c >> 8) b-and 0xFF"
+    "## Store a and b into c\na = 123 ## 8 bits (0 - 255)\nb = 231 ## 8 bits\nc = a << 8 + b\nwrite(cell1, 0, c)\n\n## Back\nc = read(cell1, 0)\nb = c b-and 0xFF\na = (c >> 8) b-and 0xFF",
+    "if (a not 8 + 6){\n\ta = 8\n}\nelse {\n\ta = rand 100\n}"
 ]
-highlighter.editorElements.input.value = codeExamples[19]
+highlighter.editorElements.input.value = codeExamples[20]
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")
 blocksViewContainer.style.height = "calc(100vh - 21px)"

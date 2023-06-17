@@ -1,0 +1,9 @@
+{
+  "examples": [
+    {
+      "path": "main.mppl",
+      "name": "Main example",
+      "description": "Example covering all main functions of MPPL"
+    }
+  ]
+}

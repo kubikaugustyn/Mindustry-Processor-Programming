@@ -31,6 +31,11 @@ class Parser {
             return this.#values[this.#i - 2]
         }
 
+        get lastValid() {
+            for (var i = this.#i - 2; i >= 0; i--) if (typeof this.#values[i] !== "undefined") return this.#values[i]
+            return undefined
+        }
+
         get done() {
             return this.#done
         }

@@ -19,8 +19,8 @@ class MindustryTokens {
             "color": {
                 "aa": "https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/linear-gradient#gradient_with_multi-position_color_stops",
                 "background-image": "linear-gradient(to right, gray 20%, red 20% 40%, green 40% 60%, blue 60% 80%, gray 80%)",
-                "bbackground-image": "linear-gradient(to right, gray, gray, red, red, green, green, blue, blue, gray, gray)",
-                "abackground-image": "linear-gradient(to right, black 0% 1.19em, red 1.19em 1.9em, black 1.9em 100%)",
+                /*"bbackground-image": "linear-gradient(to right, gray, gray, red, red, green, green, blue, blue, gray, gray)",
+                "abackground-image": "linear-gradient(to right, black 0% 1.19em, red 1.19em 1.9em, black 1.9em 100%)",*/
                 "-webkit-background-clip": "text",
                 "-moz-background-clip": "text",
                 "background-clip": "text",
@@ -107,6 +107,7 @@ class MindustryTokens {
             },
             "variable": {color: "rgb(36, 143, 143)"},
             "param": {color: "green"},
+            "label": {color: "lightgreen"},
             "link": {color: "gray"},
             "*": {color: "cyan"}
         }
