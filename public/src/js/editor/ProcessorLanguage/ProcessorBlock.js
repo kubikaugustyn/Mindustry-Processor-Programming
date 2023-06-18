@@ -57,7 +57,7 @@ class ProcessorBlock extends Token {
             if (iter.next === "{") isParam = true
             else if (iter.currentChar === "}") {
                 isParam = false
-                formatted.push(formatParam(this.params[parseInt(paramIStr)]))
+                formatted.push(formatParam(this.params[parseInt(paramIStr)] || paramIStr))
                 paramIStr = ""
             } else {
                 if (isParam) paramIStr += iter.currentChar

@@ -1,6 +1,6 @@
 var __author__ = "kubik.augustyn@post.cz"
 
-//https://github.com/frozein/PropScript/blob/master/src/interpreter.cpp
+//https://github.com/frozein/PropScript/blob/master/src/interpreter.cpp - just small core, basically all mine
 
 class MindustryCompiler extends Compiler {
     static VariableSignature = class VariableSignature {
@@ -61,12 +61,12 @@ class MindustryCompiler extends Compiler {
     // Used mainly in jump commands
     static DynamicLink = class DynamicLink {
         /**
-         * @type {ProcessorBlock}
+         * @type {number}
          */
         target
 
         toString() {
-            return `DynamicLink to "${this.target.toString()}"`
+            return "Dynamic Link" + (typeof this.target !== "undefined" ? ` to "${this.target}"` : "")
         }
     }
 
@@ -118,6 +118,14 @@ class MindustryCompiler extends Compiler {
     static inLoop = false
     static returnFlag = false
     static breakFlag = false
+    /**
+     * @type {DynamicLink, undefined}
+     */
+    static breakTarget = undefined
+    /**
+     * @type {DynamicLink, undefined}
+     */
+    static continueTarget = undefined
     static continueFlag = false
     static OPtoJUMP = new Map([
         [MindustryLexer.OPERATORS[7], "equal"],
@@ -128,6 +136,14 @@ class MindustryCompiler extends Compiler {
         [MindustryLexer.OPERATORS[13], "greaterThanEq"],
         [MindustryLexer.OPERATORS[14], "strictEqual"],
         ["*", "always"]
+    ])
+    static OPReverse = new Map([
+        ["notEqual", "equal"],
+        ["equal", "notEqual"],
+        ["greaterThanEq", "lessThan"],
+        ["greaterThan", "lessThanEq"],
+        ["lessThanEq", "greaterThan"],
+        ["lessThan", "greaterThanEq"]
     ])
 
     static OBFUSCATE = true
@@ -197,6 +213,20 @@ class MindustryCompiler extends Compiler {
         try {
             this.compileStatements(ast, ast.parentNodes)
             if (MindustryCompiler.returnFlag) MindustryCompiler.returnFlag = false
+
+            // Remove dynamic links
+            for (var block of MindustryCompiler.blocks.iter()) {
+                for (var i = 0; i < block.params.length; i++) {
+                    if (block.params[i] instanceof MindustryCompiler.DynamicLink) {
+                        /**
+                         * @type {DynamicLink}
+                         */
+                        var link = block.params[i]
+                        if (link.target >= MindustryCompiler.blocks.length) link.target = 0 // To prevent jumps pointing out of the code
+                        block.params[i] = link.target
+                    }
+                }
+            }
         } catch (e) {
             /**
              * @type {string}
@@ -223,7 +253,7 @@ class MindustryCompiler extends Compiler {
                     errMsg = "UNDEFINED FUNCTION"
                     break
                 case MindustryCompiler.RuntimeError.INVALID_PARAMS:
-                    errMsg = "INVALID PARAMETERS"
+                    errMsg = "INVALID PARAMETERS (maybe call of native function that wasn't implemented yet?)"
                     break
                 case MindustryCompiler.RuntimeError.INVALID_INDEX:
                     errMsg = "INVALID INDEX"
@@ -247,7 +277,7 @@ class MindustryCompiler extends Compiler {
             MindustryCompiler.variables.clear()
             ast.setFree()
 
-            this.handleError(errMsg + " ON LINE " + (MindustryCompiler.errorNode?.lineNum + 1), MindustryCompiler.errorNode)
+            this.handleError("COMPILER ERROR: " + errMsg + " ON LINE " + (MindustryCompiler.errorNode?.lineNum + 1), MindustryCompiler.errorNode)
         }
         ast.setFree()
         /**
@@ -304,7 +334,7 @@ class MindustryCompiler extends Compiler {
      */
     compileStatement(ast, node, addedFuncs, addedVars, name = undefined) {
         // console.log(node)
-        var left, right
+        var left, right, val
         switch (node.type) {
             case MindustryParser.SETNode:
                 return this.equal(ast, ast.nodePool[node.set.left], ast.nodePool[node.set.right], addedFuncs, addedVars)
@@ -316,7 +346,7 @@ class MindustryCompiler extends Compiler {
 
 
                 name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
-                if (node.op.type === MindustryLexer.OPERATORS[39]) this.block(ProcessorTokens.SENSOR, name, left, right)
+                if (node.op.type === MindustryLexer.OPERATORS[39]) this.block(ProcessorTokens.SENSOR, name, right, left)
                 else this.block(ProcessorTokens.OPERATION, node.op.type.processorString, name, node.op.type.has2inputs ? left : right, node.op.type.has2inputs ? right : null)
                 //console.log(node.op.type, MindustryLexer.OPERATORS)
                 /*switch (node.op.type) {
@@ -338,9 +368,25 @@ class MindustryCompiler extends Compiler {
             case MindustryParser.NUMBERNode:
                 //name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
                 //this.block(ProcessorTokens.SET, name, this.getNumberValue(node))
-                name = this.getNumberValue(node)
+                val = this.getNumberValue(node)
+                if (name) {
+                    this.block(ProcessorTokens.SET, name, val)
+                } else name = val
                 break
             case MindustryParser.KEYWORDNode:
+                var condition
+                if (typeof ast.nodePool[node.keyword.condition] !== "undefined") {
+                    condition = ast.nodePool[node.keyword.condition].op
+                    var jmpType = MindustryCompiler.OPtoJUMP.get(condition.type)
+                    if (typeof jmpType === "undefined") {
+                        left = this.compileStatement(ast, ast.nodePool[node.keyword.condition], addedFuncs, addedVars)
+                        right = "0"// Idk why, but it somehow breaks with 0 (false)
+                        jmpType = "notEqual"
+                    } else {
+                        left = this.compileStatement(ast, ast.nodePool[condition.left], addedFuncs, addedVars)
+                        right = this.compileStatement(ast, ast.nodePool[condition.right], addedFuncs, addedVars)
+                    }
+                }
                 if (node.keyword.type === "IF") {
                     /*
                     Structure:
@@ -349,28 +395,70 @@ class MindustryCompiler extends Compiler {
                     JUMP always endOfIf
                     <ifCode>
                     <endOfIf|otherBlock>
+
+                    OR
+
+                    JUMP to endOfIf if (negated condition)
+                    <ifCode>
+                    <endOfIf|otherBlock>
                      */
-                    console.log(node.keyword)
-                    var condition = ast.nodePool[node.keyword.condition].op
-                    console.log("IF:", condition)
-                    var jmpType = MindustryCompiler.OPtoJUMP.get(condition.type)
-                    if (typeof jmpType === "undefined") {
-                        left = this.compileStatement(ast, ast.nodePool[node.keyword.condition], addedFuncs, addedVars)
-                        right = 0
-                        jmpType = "notEqual"
-                    } else {
-                        left = this.compileStatement(ast, ast.nodePool[condition.left], addedFuncs, addedVars)
-                        right = this.compileStatement(ast, ast.nodePool[condition.right], addedFuncs, addedVars)
+                    /*console.log(node.keyword)
+                    console.log("IF keyword:", node.keyword)
+                    console.log("IF:", condition)*/
+                    var ifCodeJump = new MindustryCompiler.DynamicLink
+                    var afterIfJump = new MindustryCompiler.DynamicLink
+                    var ifCodeJumpBlock = this.block(ProcessorTokens.JUMP, ifCodeJump, jmpType, left, right) // Jump to ifCode
+                    if (node.keyword.hasElse) {
+                        this.compileStatements(ast, node.keyword.elseCode, addedFuncs, addedVars) // Else code
                     }
-                    this.block(ProcessorTokens.JUMP, "?", jmpType, left, right) // Jump to ifCode
-                    // this.compileStatements(ast, node.keyword) // Else code
-                    // TODO
+                    if (!node.keyword.hasElse && MindustryCompiler.OPReverse.has(ifCodeJumpBlock.params[1])) {
+                        // Reverse the condition if possible and has only if, not else
+                        ifCodeJumpBlock.params[0] = afterIfJump
+                        ifCodeJumpBlock.params[1] = MindustryCompiler.OPReverse.get(ifCodeJumpBlock.params[1])
+                    } else this.block(ProcessorTokens.JUMP, afterIfJump, "always") // Jump after whole if, runs also if hasElse
+                    ifCodeJump.target = MindustryCompiler.blocks.length
+                    this.compileStatements(ast, node.keyword.code, addedFuncs, addedVars) // If code
+                    afterIfJump.target = MindustryCompiler.blocks.length
+                    /*console.log("Ast nodes:", ast.nodePool)
                     console.group("Only if")
                     console.log("Left:", left, ast.nodePool[condition.left])
                     console.log("OP:", jmpType)
                     console.log("Right:", right, ast.nodePool[condition.right])
                     console.groupEnd()
-                    console.log(this.variable(ProcessorTypes.BOOLEAN, addedVars, name))
+                    console.group("Then")
+                    node.keyword.code.forEach(a => console.log(ast.nodePool[a]))
+                    console.groupEnd()
+                    console.group("Else")
+                    if (node.keyword.hasElse) node.keyword.elseCode.forEach(a => console.log(ast.nodePool[a]))
+                    else console.log("(Doesn't have else)")
+                    console.groupEnd()
+                    console.log(this.variable(ProcessorTypes.BOOLEAN, addedVars, name))*/
+                } else if (node.keyword.type === "WHILE") {
+                    /*console.log("WHILE keyword:", node.keyword)
+                    console.log("WHILE:", condition)*/
+                    var whileCodeJump = new MindustryCompiler.DynamicLink
+                    var whileConditionJump = new MindustryCompiler.DynamicLink
+                    var afterWhileJump = new MindustryCompiler.DynamicLink
+                    this.block(ProcessorTokens.JUMP, whileConditionJump, "always") // Jump to the condition of while (what if even first iteration shouldn't start)
+                    whileCodeJump.target = MindustryCompiler.blocks.length
+                    var oldBreakTarget = MindustryCompiler.breakTarget
+                    var oldContinueTarget = MindustryCompiler.continueTarget
+                    MindustryCompiler.breakTarget = afterWhileJump
+                    MindustryCompiler.continueTarget = whileConditionJump
+                    this.compileStatements(ast, node.keyword.code, addedFuncs, addedVars) // While code
+                    MindustryCompiler.breakTarget = oldBreakTarget
+                    MindustryCompiler.continueTarget = oldContinueTarget
+                    whileConditionJump.target = MindustryCompiler.blocks.length
+                    this.block(ProcessorTokens.JUMP, whileCodeJump, jmpType, left, right) // Jump back to the while
+                    afterWhileJump.target = MindustryCompiler.blocks.length
+                } else if (node.keyword.type === "BREAK") {
+                    //console.log("Break", node.keyword)
+                    if (typeof MindustryCompiler.breakTarget === "undefined") this.error(MindustryCompiler.RuntimeError.INVALID_BREAK_CONTINUE, node)
+                    this.block(ProcessorTokens.JUMP, MindustryCompiler.breakTarget, "always")
+                } else if (node.keyword.type === "CONTINUE") {
+                    //console.log("Continue", node.keyword)
+                    if (typeof MindustryCompiler.continueTarget === "undefined") this.error(MindustryCompiler.RuntimeError.INVALID_BREAK_CONTINUE, node)
+                    this.block(ProcessorTokens.JUMP, MindustryCompiler.continueTarget, "always")
                 } else console.log("Keyword:", node)
                 break
             default:
@@ -381,7 +469,7 @@ class MindustryCompiler extends Compiler {
     }
 
     getNumberValue(node) {
-        var val = node.literal.value
+        var val = node.literal.value.toString()
         // console.log(node, val)
         if (node.literal.type === "color") val = "%" + val.slice(2)
         return val
@@ -449,6 +537,7 @@ class MindustryCompiler extends Compiler {
         if (varNode.phrase.type === "VAR" && valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "VAR") this.block(ProcessorTokens.SET, varNode.phrase.name, valNode.phrase.name)
         else if (valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "FUNC") this.compileFunctionCall(ast, valNode, addedFuncs, addedVars, varNode.phrase.name || varNode.phrase.names)
         else this.compileStatement(ast, valNode, addedFuncs, addedVars, varNode.phrase.name)
+        return varNode.phrase.name
     }
 
     /**
@@ -495,7 +584,7 @@ class MindustryCompiler extends Compiler {
 
     /**
      * @param cons {ProcessorBlock:new}
-     * @param args {string}
+     * @param args {string, DynamicLink}
      * @returns {ProcessorBlock}
      */
     block(cons, ...args) {
@@ -527,25 +616,44 @@ class MindustryCompiler extends Compiler {
             new MindustryCompiler.FunctionSignature("draw.triangle", {}, {}, []),
             new MindustryCompiler.FunctionSignature("draw.image", {}, {}, []),
             new MindustryCompiler.FunctionSignature("print", {"text": [new ProcessorTypes.STRING]}, {}, [[ProcessorTokens.PRINT, "$text"]]),
-            new MindustryCompiler.FunctionSignature("drawflush", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("drawflush", {"block": [new ProcessorTypes.BUILDING]}, {}, [[ProcessorTokens.DRAW_FLUSH, "$block"]]),
             new MindustryCompiler.FunctionSignature("printflush", {"block": [new ProcessorTypes.BUILDING]}, {}, [[ProcessorTokens.PRINT_FLUSH, "$block"]]),
-            new MindustryCompiler.FunctionSignature("getlink", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("getlink", {"link#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"block": [new ProcessorTypes.BUILDING]}, [[ProcessorTokens.GET_LINK, "$block", "$link#"]]),
             new MindustryCompiler.FunctionSignature("control.enabled", {}, {}, []),
             new MindustryCompiler.FunctionSignature("control.shoot", {}, {}, []),
             new MindustryCompiler.FunctionSignature("control.shootp", {}, {}, []),
             new MindustryCompiler.FunctionSignature("control.config", {}, {}, []),
             new MindustryCompiler.FunctionSignature("control.color", {}, {}, []),
             new MindustryCompiler.FunctionSignature("radar", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("lookup.block", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("lookup.unit", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("lookup.item", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("lookup.liquid", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("lookup.block", {"block#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"block": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "block", "$block", "$block#"]]),
+            new MindustryCompiler.FunctionSignature("lookup.unit", {"unit#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"unit": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "unit", "$unit", "$unit#"]]),
+            new MindustryCompiler.FunctionSignature("lookup.item", {"item#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"item": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "item", "$item", "$item#"]]),
+            new MindustryCompiler.FunctionSignature("lookup.liquid", {"liquid#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"liquid": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "liquid", "$liquid", "$liquid#"]]),
             new MindustryCompiler.FunctionSignature("packcolor", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("wait", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("stop", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("end", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("jump", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("ubind", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("wait", {"time": [new ProcessorTypes.POSITIVE_NUMBER]}, {}, [[ProcessorTokens.WAIT, "$time"]]),
+            new MindustryCompiler.FunctionSignature("stop", {}, {}, [[ProcessorTokens.STOP]]),
+            new MindustryCompiler.FunctionSignature("end", {}, {}, [[ProcessorTokens.END]]),
+            new MindustryCompiler.FunctionSignature("jump", {
+                "addr": [new ProcessorTypes.POSITIVE_INTEGER],
+                "type": [
+                    "equal",
+                    "notEqual",
+                    "lessThan",
+                    "lessThanEq",
+                    "greaterThan",
+                    "greaterThanEq",
+                    "strictEqual"
+                ],
+                // Name**?** means it's optional, signature is invalid when after one optional argument isn't another OPTIONAL argument
+                "left?": [new ProcessorTypes.ANY],
+                "right?": [new ProcessorTypes.ANY]
+            }, {}, [[ProcessorTokens.JUMP, "$addr", "$type", "$left?", "$right?"]]),
+            new MindustryCompiler.FunctionSignature("ubind", {
+                "typeOrUnit": [
+                    new ProcessorTypes.UNIT, // Bind specific stored unit
+                    new ProcessorTypes.CONTENT // Bind unit of type
+                ]
+            }, {}, [[ProcessorTokens.UNIT_BIND, "$typeOrUnit"]]),
             new MindustryCompiler.FunctionSignature("ucontrol.idle", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ucontrol.stop", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ucontrol.move", {}, {}, []),

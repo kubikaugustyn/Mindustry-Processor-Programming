@@ -102,10 +102,18 @@ class Parser {
          */
         find(predicate, thisArg) {
             return this.items.find(predicate, thisArg)
+        };
+
+        * iter() {
+            for (var i = 0; i < this.#length; i++) yield this.#content[i]
         }
 
         get items() {
             return this.#content.slice(0, this.#length)
+        }
+
+        get length() {
+            return this.#length
         }
     }
 

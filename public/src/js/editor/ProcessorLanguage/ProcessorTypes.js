@@ -77,6 +77,9 @@ class ProcessorType {
 }
 
 class ProcessorTypes {
+    static ANY = class extends ProcessorType {
+        name = "any"
+    }
     static STRING = class extends ProcessorType {
         name = "string"
     }

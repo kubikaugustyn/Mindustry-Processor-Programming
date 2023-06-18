@@ -6,9 +6,17 @@ var parser = new MindustryParser()
 var compiler = new MindustryCompiler()
 
 function blocksContainerError(msg) {
+    /*blocksView.getBlocksContainer().style.color = "red"
+    blocksView.getBlocksContainer().innerHTML = msg*/
+    if (msg instanceof Error) {
+        //console.log("Error...", msg.name, msg.cause, msg.stack, msg.message)
+        /*ProcessorBlocksView.DEBUG_LOG = true
+        blocksView.copyToClipboard(msg.stack)
+        ProcessorBlocksView.DEBUG_LOG = false*/
+        msg = msg.stack || msg.name + msg.message
+    }
+    blocksView.addErrors(false, msg.replaceAll("<", "&lt;").replaceAll("    ", "<tab></tab>").replaceAll("\n", "<br>"))
     blocksView.setBlocks([])
-    blocksView.getBlocksContainer().style.color = "red"
-    blocksView.getBlocksContainer().innerHTML = msg
 }
 
 var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
@@ -134,11 +142,16 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
         }
     } catch (e) {
         if (e?.name) {
-            if (e?.token) onError(e, e.token)
-            console.warn(e)
-            blocksContainerError(e)
-            this.editorElements.code.style.color = "red"
-            this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
+            if (e?.token) try {
+                onError.bind(this)(e, e.token)
+            } catch {
+            }
+            else {
+                console.warn(e)
+                blocksContainerError(e)
+                this.editorElements.code.style.color = "red"
+                this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
+            }
         }
     }
 }, function (code, color = "blue") {
@@ -303,9 +316,11 @@ c = a max b`,
     "a = 8 + 7 * 3 % (@j of @k)",
     "a = 0caabbccdd",
     "## Store a and b into c\na = 123 ## 8 bits (0 - 255)\nb = 231 ## 8 bits\nc = a << 8 + b\nwrite(cell1, 0, c)\n\n## Back\nc = read(cell1, 0)\nb = c b-and 0xFF\na = (c >> 8) b-and 0xFF",
-    "if (a not 8 + 6){\n\ta = 8\n}\nelse {\n\ta = rand 100\n}"
+    "if (a not 8 + 6){\n\ta = 8\n}\nelse {\n\ta = rand 100\n}",
+    "target = @titanium\nwhile (a < @itemsCount){\n\tcmp = lookup.item(a)\n\tif (cmp == target) {\n\t\tbreak\n\t}\n\ta = a + 1\n}",
+    "cmp = lookup.item(a)\nif (cmp == target) {\n\ta = 7\n}\nelse {\n\ta = rand 92\n}\nb = 72 max a"
 ]
-highlighter.editorElements.input.value = codeExamples[20]
+highlighter.editorElements.input.value = codeExamples[0]
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")
 blocksViewContainer.style.height = "calc(100vh - 21px)"

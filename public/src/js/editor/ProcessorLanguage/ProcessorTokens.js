@@ -175,7 +175,8 @@ class ProcessorTokens { // Basically all block available in processor
             [{1: "greaterThan"}, "if {2} > {3}"],
             [{1: "greaterThanEq"}, "if {2} >= {3}"],
             [{1: "strictEq"}, "if {2} === {3}"],
-            [{1: "always"}, "if always"]
+            [{1: "always"}, "if {always}"],
+            [{}, "Unknown type: {1}"]
         ]
         command = "jump"
     }

@@ -157,15 +157,15 @@ class MindustryLexer extends Lexer {
     static LABEL_PHRASE_PREFIX = ":"
     static VALIDATE_PHRASE = function (phrase) {
         if (phrase.includes(MindustryLexer.PARAM_PHRASE_PREFIX)) {
-            return /^[a-zA-Z0-9.-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)
+            return /^[a-zA-Z0-9.\-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)
         }
         if (phrase.includes(MindustryLexer.LABEL_PHRASE_PREFIX)) {
-            return /^[a-zA-Z0-9.-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)
+            return /^[a-zA-Z0-9.\-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)
         }
-        return /^[a-zA-Z0-9.-_]+$/.test(phrase)
+        return /^[a-zA-Z0-9.\-_]+$/.test(phrase)
     }
     static VALIDATE_PHRASE_CHAR = function (char) {
-        return /[a-zA-Z0-9.@-_]/.test(char) || MindustryLexer.PARAM_PHRASE_PREFIX.includes(char) || MindustryLexer.LABEL_PHRASE_PREFIX.includes(char)
+        return /[a-zA-Z0-9.@\-_]/.test(char) || MindustryLexer.PARAM_PHRASE_PREFIX.includes(char) || MindustryLexer.LABEL_PHRASE_PREFIX.includes(char)
     };
 
     * generateTokens() {
@@ -235,7 +235,9 @@ class MindustryLexer extends Lexer {
             if (!foundToken) {
                 [phrase, countSkip] = this.generatePhrase()
                 if (!phrase) {
-                    throw new Error(`Illegal non-alphanumeric or @ or . character in phrase.`)
+                    var err = new Error("Illegal non-alphanumeric or @ or . character in phrase.")
+                    err.token = {lineNum: this.lineNumber}
+                    throw err
                     /*notFoundTokenCount++
                     if (notFoundTokenCount >= notFoundTokenCountLimit) throw new class extends Error {
                         name = "MindustryLexerTokenError"

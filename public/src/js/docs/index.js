@@ -39,9 +39,9 @@ function init() {
  * @param container {HTMLDivElement}
  */
 function renderProcessorType(processorType, name, container) {
-    (["boolean", "unit"].includes(processorType.name) || !processorType.name) && console.log(processorType, container, processorType.toString())
+    //(["boolean", "unit"].includes(processorType.name) || !processorType.name) && console.log(processorType, container, processorType.toString())
     var header = document.createElement("h2")
-    header.innerHTML =  `<a href="#type-${name.toLowerCase()}">${name.replaceAll("_", " ")}</a>`
+    header.innerHTML = `<a href="#type-${name.toLowerCase()}">${name.replaceAll("_", " ")}</a>`
     container.appendChild(header)
     createP(container, processorType.toString())
     if (processorType.properties?.size > 0) createTable(container, mapTypeNamesToLinks(Array(...processorType.properties.entries()), a => "@" + a), ["Property name", "Type"])
@@ -51,7 +51,7 @@ function renderProcessorType(processorType, name, container) {
 function mapTypeNamesToLinks(typeEntries, nameModifier = a => a) {
     return typeEntries.map(([name, value]) => {
         var names = value.split("|")
-        return [nameModifier(name), names.map(name => `<a href="#type-${name.toLowerCase()}">${name.replaceAll("_", " ")}</a>`).join(" OR ")]
+        return [nameModifier(name), names.map(name => name.includes('"') ? name : `<a href="#type-${name.toLowerCase()}">${name.replaceAll("_", " ")}</a>`).join(" OR ")]
     })
 }
 
@@ -69,7 +69,7 @@ function getProcessorTypeName(instance) {
         } catch {
             return false
         }
-    })
+    }) || '"' + instance + '"'
 }
 
 /**
