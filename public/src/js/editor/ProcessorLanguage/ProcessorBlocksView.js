@@ -145,7 +145,7 @@ class ProcessorBlocksView {
 
             var titleSpan = document.createElement("span")
             titleSpan.classList.add("title")
-            titleSpan.innerHTML = (block.blockTitle === "Jump" && block.params[0] !== "-1") ? `${block.blockTitle} -> ${block.params[0]}` : block.blockTitle
+            titleSpan.innerHTML = (block.blockTitle === "Jump" && block.params[0] !== "-1") ? `${block.blockTitle} → ${block.params[0]}` : block.blockTitle
             headlineDiv.appendChild(titleSpan)
 
             var indexSpan = document.createElement("span")

@@ -39,14 +39,29 @@ tab {
 
 /* Please see the article */
 
+.load-saver {
+    margin: 10px 10px 0 10px;
+    padding: 10px 10px 10px 10px;
+    border: 0;
+    width: calc(50vw - 40px);
+    height: 35px;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
 .editing, .highlighting {
     /* Both elements need the same text and space styling so they are directly on top of each other */
-    margin: 10px;
+    margin: 0 10px 10px;
     padding: 10px 10px 10px calc(var(--lineNumbersWidth) + 15px);
     border: 0;
     width: calc(50vw - 45px - var(--lineNumbersWidth));
     /*height: 150px;*/
-    height: calc(100vh - 40px);
+    height: calc(100vh - 40px - 65px);
+    /* In the same place */
+    position: absolute;
+    top: 65px;
+    left: 0;
 }
 
 .editing, .highlighting, .highlighting * {
@@ -55,14 +70,6 @@ tab {
     font-family: monospace;
     line-height: 20pt;
     tab-size: 2;
-}
-
-
-.editing, .highlighting {
-    /* In the same place */
-    position: absolute;
-    top: 0;
-    left: 0;
 }
 
 
