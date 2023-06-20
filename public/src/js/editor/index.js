@@ -162,8 +162,8 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
 document.body.classList.add("split-screen")
 var editor = highlighter.getEditor()
 editor.classList.add("left")
+loadSaver.setHighlighter(highlighter)
 editor.insertBefore(loadSaver.getContainer(), editor.firstChild)
-loadSaver.tryLoadProject()
 document.body.appendChild(editor)
 // TODO load from /examples/examples.json
 var codeExamples = [
@@ -323,7 +323,7 @@ c = a max b`,
     "target = @titanium\nwhile (a < @itemsCount){\n\tcmp = lookup.item(a)\n\tif (cmp == target) {\n\t\tbreak\n\t}\n\ta = a + 1\n}",
     "cmp = lookup.item(a)\nif (cmp == target) {\n\ta = 7\n}\nelse {\n\ta = rand 92\n}\nb = 72 max a"
 ]
-highlighter.editorElements.input.value = codeExamples[21]
+// highlighter.editorElements.input.value = codeExamples[21]
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")
 blocksViewContainer.style.height = "calc(100vh - 21px)"
@@ -335,7 +335,7 @@ clearDiv.classList.add("clear")
 document.body.appendChild(clearDiv)
 
 highlighter.onInput()
-highlighter.onKeyUp()
+//highlighter.onKeyUp()
 /*
 read result cell1 0
 op add result result 1

@@ -76,7 +76,7 @@ class ProcessorBlocksView {
 
     copyToClipboard(code = undefined) {
         if (!code && !this.blocks) return
-        code = code || this.blocks.map(block => block.toString()).join("\n")
+        code = code instanceof Event ? this.blocks.map(block => block.toString()).join("\n") : code
         this.copyElement.innerText = code
         this.copyElement.select();
         this.copyElement.setSelectionRange(0, code.length + 1); // For mobile devices

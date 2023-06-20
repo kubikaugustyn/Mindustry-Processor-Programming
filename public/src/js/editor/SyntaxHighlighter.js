@@ -77,6 +77,12 @@ class SyntaxHighlighter {
         this.highlightSyntax(this.highlightOnKeyUp)
     }
 
+    setCode(code) {
+        this.editorElements.input.value = code
+        this.onInput()
+        this.onKeyUp()
+    }
+
     update(text) {
         // Handle final newlines (see article)
         if (text[text.length - 1] === "\n") {

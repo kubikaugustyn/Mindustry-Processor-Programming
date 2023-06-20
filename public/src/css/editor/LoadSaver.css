@@ -1,3 +1,59 @@
 .load-saver {
     margin: 10px;
 }
+
+.load-saver .save::before {
+    content: "Save";
+}
+
+.load-saver .load::before {
+    content: "Load";
+}
+
+.load-saver .project-select::before {
+    content: "Select project";
+}
+
+.load-saver .download::before {
+    content: "Download";
+}
+
+body * {
+    z-index: 0;
+}
+
+.load-saver .popup {
+    z-index: 5;
+    background-color: rgba(0, 0, 0, 0.5);
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+}
+
+.load-saver .popup.hidden {
+    display: none;
+}
+
+.load-saver .popup .popup-content {
+    z-index: 2;
+    background-color: white;
+    width: fit-content;
+    height: fit-content;
+    min-width: 25vw;
+    min-height: 25vh;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px;
+    border-radius: 10px;
+    border: 2px solid black;
+    user-select: none;
+}
+
+.load-saver .popup .popup-content h1, .load-saver .popup .popup-content h2, .load-saver .popup .popup-content h3 {
+    margin: 0;
+    text-align: center;
+}
