@@ -1,7 +1,7 @@
 var __author__ = "kubik.augustyn@post.cz"
 
-// TODO https://developer.mozilla.org/en-US/docs/Web/API/Window/showSaveFilePicker
-// TODO https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream/write
+// https://developer.mozilla.org/en-US/docs/Web/API/Window/showSaveFilePicker
+// https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream/write
 
 class LoadSaver {
     static LocalStoragePrefix = "load_saver-"
@@ -79,13 +79,16 @@ class LoadSaver {
 
         this.popup.appendChild(this.popupContent)
         this.container.appendChild(this.popup)
-        this.container.appendChild(this.saveButton)
-        this.container.appendChild(this.loadButton)
-        LoadSaver.CanAccessFilesystem && this.container.appendChild(this.projectSelectButton)
+        if (LoadSaver.CanAccessFilesystem) {
+            this.container.appendChild(this.saveButton)
+            this.container.appendChild(this.loadButton)
+            this.container.appendChild(this.projectSelectButton)
+        }
         this.container.appendChild(this.downloadButton)
 
         this.#hidePopup()
         this.#loadProjects()
+        this.#disableButtons(false)
     }
 
     /**
@@ -127,17 +130,18 @@ class LoadSaver {
             if (!name) return
         }
         this.project = name
-        this.#requestProjectDir().then(dir => {
-            this.#fileSelected(dir)
-            this.#newProjectInDir(name, dir)
+        this.#requestProjectFile().then(files => {
+            if (!files) return
+            this.#fileSelected(files[0])
+            this.#newProjectInFile(name, files[0])
         }).catch(reason => window.alert("Failed to select file for new project: " + reason))
     }
 
     /**
-     * @returns {Promise<FileSystemFileHandle>}
+     * @returns {Promise<FileSystemFileHandle[]>}
      */
-    #requestProjectDir() {
-        return window.showSaveFilePicker({
+    #requestProjectFile() {
+        return window.showOpenFilePicker({
             suggestedName: this.project,
             types: [
                 {
@@ -159,7 +163,7 @@ class LoadSaver {
      * @param name {string}
      * @param file {FileSystemFileHandle}
      */
-    #newProjectInDir(name, file) {
+    #newProjectInFile(name, file) {
         console.log("New project", name, "in", file)
         this.#verifyPermission(file, true).then(success => {
             if (!success) {
@@ -180,16 +184,15 @@ class LoadSaver {
         // Simplified https://developer.mozilla.org/en-US/docs/Web/API/FileSystemHandle#queryrequest_permissions
         var opts = {};
         if (withWrite) {
-            opts.mode = "readwrite";
+            opts.mode = "readwrite"
         }
         if ((await fileHandle.queryPermission(opts)) === "granted") {
-            return true;
+            return true
         }
-        return (await fileHandle.requestPermission(opts)) === "granted";
+        return (await fileHandle.requestPermission(opts)) === "granted"
     }
 
     #save() {
-        console.log("Save!")
         /**
          * @type {HTMLTextAreaElement}
          */
@@ -197,7 +200,16 @@ class LoadSaver {
         if (!input) return
 
         if (LoadSaver.CanAccessFilesystem) {
-            console.log("Save!")
+            // console.log("Save!")
+            if (!this.projectFile) {
+                window.alert("Failed to save project file: project not open.")
+                return
+            }
+            this.#getFileWritable(this.projectFile).then(fileWrite => {
+                console.log("File write:", fileWrite)
+                fileWrite.write(input.value).catch(reason => window.alert("Failed to load contents of file of project: " + reason))
+                fileWrite.close()
+            }).catch(reason => window.alert("Failed to load file of project: " + reason))
             return
         }
         localStorage.setItem(LoadSaver.LocalStoragePrefix + "code", input.value)
@@ -211,25 +223,62 @@ class LoadSaver {
         if (!input) return
 
         if (LoadSaver.CanAccessFilesystem) {
-            console.log("Load!")
+            // console.log("Load!")
+            if (!this.projectFile) {
+                window.alert("Failed to load project file: project not open.")
+                return
+            }
+            this.#getFileContent(this.projectFile).then(file => {
+                console.log("Load from file:", file)
+                file.text().then(code => {
+                    this.highlighter.setCode(code || "## Enter code here\n## Code couldn't be loaded")
+                }).catch(reason => window.alert("Failed to load contents of file of project: " + reason))
+            }).catch(reason => window.alert("Failed to load file of project: " + reason))
             return
         }
         var code = localStorage.getItem(LoadSaver.LocalStoragePrefix + "code") || "## Enter code here\n## Code couldn't be loaded"
         this.highlighter.setCode(code)
     }
 
+    /**
+     * @param fileHandle {FileSystemFileHandle}
+     * @returns {Promise<File>}
+     */
+    async #getFileContent(fileHandle) {
+        //console.log(fileHandle, fileHandle.createSyncAccessHandle, fileHandle.createWritable)
+        return (await fileHandle.getFile())
+    }
+
+    /**
+     * @param fileHandle {FileSystemFileHandle}
+     * @returns {Promise<FileSystemWritableFileStream>}
+     */
+    async #getFileWritable(fileHandle) {
+        return (await fileHandle.createWritable())
+    }
+
     #loadProject(name) {
         if (!LoadSaver.CanAccessFilesystem) return
         // console.log("Load project:", name, this.projects.get(name))
         this.project = name
-        this.#requestProjectDir().then(file => {
-            this.#fileSelected(file)
-            console.log("Load from file:", file)
+        this.#requestProjectFile().then(files => {
+            if (!files) return
+            this.#fileSelected(files[0])
+            console.log("Load project from file:", files[0])
+            this.#verifyPermission(files[0], true).then(success => {
+                this.#disableButtons(success)
+                if (success) this.#load()
+                else window.alert("You need to grant permissions to read and write to the project file.")
+            })
         }).catch(reason => window.alert("Failed to select file for project '" + name + "': " + reason))
     }
 
+    #disableButtons(hasProjectFileAccess) {
+        this.loadButton.disabled = this.saveButton.disabled = !hasProjectFileAccess
+    }
+
     #projectSelect() {
-        console.log("Select project!")
+        // console.log("Select project!")
         this.popupContent.innerHTML = "<h2>Select project</h2>"
         var newButton = document.createElement("button")
         newButton.innerText = "New project"

@@ -77,7 +77,8 @@ class SyntaxHighlighter {
         this.highlightSyntax(this.highlightOnKeyUp)
     }
 
-    setCode(code) {
+    setCode(code, shouldConfirm = true) {
+        if (shouldConfirm && this.editorElements.input.value && !confirm("Do you really want to discard changes?")) return
         this.editorElements.input.value = code
         this.onInput()
         this.onKeyUp()

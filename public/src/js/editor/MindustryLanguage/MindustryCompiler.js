@@ -373,6 +373,12 @@ class MindustryCompiler extends Compiler {
                     this.block(ProcessorTokens.SET, name, val)
                 } else name = val
                 break
+            case MindustryParser.STRINGNode:
+                val = this.getStringValue(node)
+                if (name) {
+                    this.block(ProcessorTokens.SET, name, val)
+                } else name = val
+                break
             case MindustryParser.KEYWORDNode:
                 var condition
                 if (typeof ast.nodePool[node.keyword.condition] !== "undefined") {

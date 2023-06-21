@@ -366,7 +366,7 @@ class MindustryLexer extends Lexer {
             multiline = true
         }
 
-        while (!this.text.done) {
+        while (!this.text.done && !MindustryLexer.NEWLINE.includes(this.currentChar)) {
             if (this.currentChar === beginning && !multiline) {
                 this.advance()
                 this.keepToken()

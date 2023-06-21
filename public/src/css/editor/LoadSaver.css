@@ -18,6 +18,11 @@
     content: "Download";
 }
 
+.load-saver button {
+    height: 30px;
+    margin-left: 5px;
+}
+
 body * {
     z-index: 0;
 }
