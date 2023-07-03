@@ -38,7 +38,7 @@ class MindustryCompiler extends Compiler {
         /**
          * @param name {string}
          * @param args {Object<string, ProcessorType[]>}
-         * @param returns {Object<string, ProcessorType[]>}
+         * @param returns {Object<string, string[], ProcessorType[]>}
          * @param content {[*]}
          */
         constructor(name, args, returns, content) {
@@ -346,7 +346,9 @@ class MindustryCompiler extends Compiler {
 
 
                 name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
-                if (node.op.type === MindustryLexer.OPERATORS[39]) this.block(ProcessorTokens.SENSOR, name, right, left)
+                // If operator is 'of' or 'in'
+                if (node.op.type === MindustryLexer.OPERATORS[39] || node.op.type === MindustryLexer.OPERATORS[40]) this.block(ProcessorTokens.SENSOR, name, right, left)
+                // Else just the operator
                 else this.block(ProcessorTokens.OPERATION, node.op.type.processorString, name, node.op.type.has2inputs ? left : right, node.op.type.has2inputs ? right : null)
                 //console.log(node.op.type, MindustryLexer.OPERATORS)
                 /*switch (node.op.type) {
@@ -610,32 +612,111 @@ class MindustryCompiler extends Compiler {
                 "addr": [new ProcessorTypes.POSITIVE_INTEGER],
                 "val": [new ProcessorTypes.NUMBER]
             }, {}, [[ProcessorTokens.WRITE, "$val", "$block", "$addr"]]),
-            new MindustryCompiler.FunctionSignature("draw.clear", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.color", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.col", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.stroke", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.line", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.rect", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.lineRect", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.poly", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.linePoly", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.triangle", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("draw.image", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("draw.clear", {
+                "R": [new ProcessorTypes.COLOR],
+                "G": [new ProcessorTypes.COLOR],
+                "B": [new ProcessorTypes.COLOR]
+            }, {}, [[ProcessorTokens.DRAW, "clear", "$R", "$G", "$B"]]),
+            new MindustryCompiler.FunctionSignature("draw.color", {
+                "R": [new ProcessorTypes.COLOR],
+                "G": [new ProcessorTypes.COLOR],
+                "B": [new ProcessorTypes.COLOR],
+                "A": [new ProcessorTypes.COLOR]
+            }, {}, [[ProcessorTokens.DRAW, "color", "$R", "$G", "$B", "$A"]]),
+            new MindustryCompiler.FunctionSignature("draw.col", {"color": [new ProcessorTypes.COLOR_NUMBER]}, {}, [[ProcessorTokens.DRAW, "col", "$color"]]),
+            new MindustryCompiler.FunctionSignature("draw.stroke", {"color": [new ProcessorTypes.COLOR_NUMBER]}, {}, [[ProcessorTokens.DRAW, "stroke", "$color"]]),
+            new MindustryCompiler.FunctionSignature("draw.line", {
+                "x1": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y1": [new ProcessorTypes.POSITIVE_INTEGER],
+                "x2": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y2": [new ProcessorTypes.POSITIVE_INTEGER]
+            }, {}, [[ProcessorTokens.DRAW, "line", "$x1", "$y1", "$x2", "$y2"]]),
+            new MindustryCompiler.FunctionSignature("draw.rect", {
+                "x": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y": [new ProcessorTypes.POSITIVE_INTEGER],
+                "w": [new ProcessorTypes.POSITIVE_INTEGER],
+                "h": [new ProcessorTypes.POSITIVE_INTEGER]
+            }, {}, [[ProcessorTokens.DRAW, "rect", "$x", "$y", "$w", "$h"]]),
+            new MindustryCompiler.FunctionSignature("draw.lineRect", {
+                "x": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y": [new ProcessorTypes.POSITIVE_INTEGER],
+                "w": [new ProcessorTypes.POSITIVE_INTEGER],
+                "h": [new ProcessorTypes.POSITIVE_INTEGER]
+            }, {}, [[ProcessorTokens.DRAW, "lineRect", "$x", "$y", "$w", "$h"]]),
+            new MindustryCompiler.FunctionSignature("draw.poly", {
+                "x": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y": [new ProcessorTypes.POSITIVE_INTEGER],
+                "sides": [new ProcessorTypes.POSITIVE_INTEGER],
+                "radius": [new ProcessorTypes.POSITIVE_NUMBER],
+                "rotation": [new ProcessorTypes.POSITIVE_INTEGER]
+            }, {}, [[ProcessorTokens.DRAW, "poly", "$x", "$y", "$sides", "$radius", "$rotation"]]),
+            new MindustryCompiler.FunctionSignature("draw.linePoly", {
+                "x": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y": [new ProcessorTypes.POSITIVE_INTEGER],
+                "sides": [new ProcessorTypes.POSITIVE_INTEGER],
+                "radius": [new ProcessorTypes.POSITIVE_NUMBER],
+                "rotation": [new ProcessorTypes.POSITIVE_INTEGER]
+            }, {}, [[ProcessorTokens.DRAW, "linePoly", "$x", "$y", "$sides", "$radius", "$rotation"]]),
+            new MindustryCompiler.FunctionSignature("draw.triangle", {
+                "x1": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y1": [new ProcessorTypes.POSITIVE_INTEGER],
+                "x2": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y2": [new ProcessorTypes.POSITIVE_INTEGER],
+                "x3": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y3": [new ProcessorTypes.POSITIVE_INTEGER]
+            }, {}, [[ProcessorTokens.DRAW, "triangle", "$x1", "$y1", "$x2", "$y2", "$x3", "$y3"]]),
+            new MindustryCompiler.FunctionSignature("draw.image", {
+                "x": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y": [new ProcessorTypes.POSITIVE_INTEGER],
+                "image": [new ProcessorTypes.CONTENT],
+                "size": [new ProcessorTypes.POSITIVE_NUMBER],
+                "rotation": [new ProcessorTypes.POSITIVE_INTEGER]
+            }, {}, [[ProcessorTokens.DRAW, "image", "$x", "$y", "$image", "$size", "$rotation"]]),
             new MindustryCompiler.FunctionSignature("print", {"text": [new ProcessorTypes.STRING]}, {}, [[ProcessorTokens.PRINT, "$text"]]),
             new MindustryCompiler.FunctionSignature("drawflush", {"block": [new ProcessorTypes.BUILDING]}, {}, [[ProcessorTokens.DRAW_FLUSH, "$block"]]),
             new MindustryCompiler.FunctionSignature("printflush", {"block": [new ProcessorTypes.BUILDING]}, {}, [[ProcessorTokens.PRINT_FLUSH, "$block"]]),
             new MindustryCompiler.FunctionSignature("getlink", {"link#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"block": [new ProcessorTypes.BUILDING]}, [[ProcessorTokens.GET_LINK, "$block", "$link#"]]),
-            new MindustryCompiler.FunctionSignature("control.enabled", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("control.shoot", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("control.shootp", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("control.config", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("control.color", {}, {}, []),
-            new MindustryCompiler.FunctionSignature("radar", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("control.enabled", {
+                "block": [new ProcessorTypes.BUILDING],
+                "enabled": [new ProcessorTypes.BOOLEAN]
+            }, {}, [[ProcessorTokens.CONTROL, "enabled", "$block", "$enabled"]]),
+            new MindustryCompiler.FunctionSignature("control.shoot", {
+                "block": [new ProcessorTypes.BUILDING],
+                "x": [new ProcessorTypes.POSITIVE_INTEGER],
+                "y": [new ProcessorTypes.POSITIVE_INTEGER],
+                "shoot": [new ProcessorTypes.BOOLEAN]
+            }, {}, [[ProcessorTokens.CONTROL, "shoot", "$block", "$x", "$y", "$shoot"]]),
+            new MindustryCompiler.FunctionSignature("control.shootp", {
+                "block": [new ProcessorTypes.BUILDING],
+                "unit": [new ProcessorTypes.UNIT],
+                "shoot": [new ProcessorTypes.BOOLEAN]
+            }, {}, [[ProcessorTokens.CONTROL, "shootp", "$block", "$unit", "$shoot"]]),
+            new MindustryCompiler.FunctionSignature("control.config", {
+                "block": [new ProcessorTypes.BUILDING],
+                "config": [new ProcessorTypes.CONTENT]
+            }, {}, [[ProcessorTokens.CONTROL, "config", "$block", "$config"]]),
+            new MindustryCompiler.FunctionSignature("control.color", {
+                "block": [new ProcessorTypes.BUILDING],
+                "color": [new ProcessorTypes.COLOR_NUMBER]
+            }, {}, [[ProcessorTokens.CONTROL, "color", "$block", "$color"]]),
+            new MindustryCompiler.FunctionSignature("radar", {
+                "block": [new ProcessorTypes.BUILDING],
+                "target": ["any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground"],
+                "target2": ["any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground"],
+                "target3": ["any", "enemy", "ally", "player", "attacker", "flying", "boss", "ground"],
+                "order": [new ProcessorTypes.POSITIVE_INTEGER],
+                "sort": ["distance", "health", "shield", "armor", "maxHealth"]
+            }, {"unit": [new ProcessorTypes.UNIT]}, [[ProcessorTokens.RADAR, "$block", "$target", "$target2", "$target3", "$order", "$sort", "$unit"]]),
             new MindustryCompiler.FunctionSignature("lookup.block", {"block#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"block": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "block", "$block", "$block#"]]),
             new MindustryCompiler.FunctionSignature("lookup.unit", {"unit#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"unit": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "unit", "$unit", "$unit#"]]),
             new MindustryCompiler.FunctionSignature("lookup.item", {"item#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"item": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "item", "$item", "$item#"]]),
             new MindustryCompiler.FunctionSignature("lookup.liquid", {"liquid#": [new ProcessorTypes.POSITIVE_INTEGER]}, {"liquid": [new ProcessorTypes.CONTENT]}, [[ProcessorTokens.LOOKUP, "liquid", "$liquid", "$liquid#"]]),
-            new MindustryCompiler.FunctionSignature("packcolor", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("packcolor", {
+                "R": [new ProcessorTypes.COLOR],
+                "G": [new ProcessorTypes.COLOR],
+                "B": [new ProcessorTypes.COLOR],
+                "A": [new ProcessorTypes.COLOR]
+            }, {"color": [new ProcessorTypes.COLOR_NUMBER]}, [[ProcessorTokens.PACK_COLOR, "$color", "$R", "$G", "$B", "$A"]]),
             new MindustryCompiler.FunctionSignature("wait", {"time": [new ProcessorTypes.POSITIVE_NUMBER]}, {}, [[ProcessorTokens.WAIT, "$time"]]),
             new MindustryCompiler.FunctionSignature("stop", {}, {}, [[ProcessorTokens.STOP]]),
             new MindustryCompiler.FunctionSignature("end", {}, {}, [[ProcessorTokens.END]]),
@@ -660,10 +741,11 @@ class MindustryCompiler extends Compiler {
                     new ProcessorTypes.CONTENT // Bind unit of type
                 ]
             }, {}, [[ProcessorTokens.UNIT_BIND, "$typeOrUnit"]]),
-            new MindustryCompiler.FunctionSignature("ucontrol.idle", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("ucontrol.idle", {}, {}, [[ProcessorTokens.UNIT_CONTROL, "idle"]]),
             new MindustryCompiler.FunctionSignature("ucontrol.stop", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ucontrol.move", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ucontrol.approach", {}, {}, []),
+            new MindustryCompiler.FunctionSignature("ucontrol.pathfind", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ucontrol.boost", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ucontrol.target", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ucontrol.targetp", {}, {}, []),

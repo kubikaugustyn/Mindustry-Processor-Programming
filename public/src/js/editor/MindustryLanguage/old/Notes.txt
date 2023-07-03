@@ -10,8 +10,8 @@ draw linePoly 0 0 0 0 0
 draw triangle 0 0 0 0 0 0
 draw image 0 0 @copper 32 0
 -->
-draw(clear, 0, 0, 0)
-draw(color, 0, 0, 0, 255)
+draw.clear(0, 0, 0)
+draw.color(0, 0, 0, 255)
 etc.
 
 
@@ -42,11 +42,11 @@ control shootp block1 0 0 0 0
 control config block1 0 0 0 0
 control color block1 0 0 0 0
 -->
-control(enabled, block1, 0)
-control(shoot, block1, 0, 0, 0)
-control(shootp, block1, 0, 0)
-control(config, block1, 0)
-control(color, block1, 0)
+control.enabled(block1, 0)
+control.shoot(block1, 0, 0, 0)
+control.shootp(block1, 0, 0)
+control.config(block1, 0)
+control.color(block1, 0)
 
 
 radar enemy any any distance turret1 1 result

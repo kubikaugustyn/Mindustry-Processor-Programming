@@ -1,16 +1,19 @@
 var __author__ = "kubik.augustyn@post.cz"
 
 class SyntaxHighlighter {
+    static ctx = document.createElement("canvas").getContext("2d")
     language
     editorElements
     highlightSyntax
     rawSyntax
+    autoCompleter
     highlightOnKeyUp = null
 
-    constructor(language, highlightSyntax, rawSyntax) {
+    constructor(language, highlightSyntax, rawSyntax, autoCompleter) {
         this.language = language
         this.highlightSyntax = highlightSyntax?.bind?.(this)
         this.rawSyntax = rawSyntax?.bind?.(this)
+        this.autoCompleter = autoCompleter?.bind?.(this)
         Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(method => (method !== 'constructor')).forEach((method) => {
             this[method] = this[method].bind(this);
         });
@@ -37,9 +40,13 @@ class SyntaxHighlighter {
 
             var code = this.code = document.createElement("code")
 
+            var autoComplete = this.autoComplete = document.createElement("div")
+            autoComplete.classList.add("autocomplete")
+
             highlighter.editor.appendChild(inp)
             pre.appendChild(lineNumbers)
             pre.appendChild(code)
+            highlighter.editor.appendChild(autoComplete)
             highlighter.editor.appendChild(pre)
         }(this)
         /*
@@ -52,6 +59,7 @@ class SyntaxHighlighter {
             </pre>
         </div>
         */
+        this.autoComplete = new AutoComplete(this, this.autoCompleter)
     }
 
     getEditor() {
@@ -113,10 +121,24 @@ class SyntaxHighlighter {
         this.editor.style.setProperty("--lineNumbersWidth", lineNumbersWidth + "px")
         this.editorElements.code.style.transform = `translate(${-element.scrollLeft}px, ${-element.scrollTop}px)`
         this.editorElements.lineNumbers.style.transform = `translate(${-element.scrollLeft - lineNumbersWidth - 10}px, ${-element.scrollTop}px)`
+        var cursor = this.getCursorPos(this.editorElements.input)
+        if (!cursor) {
+            this.autoComplete.closePopup()
+            cursor = {start: 0, end: 0}
+        }
+        this.autoComplete.moveTo(-element.scrollLeft, -element.scrollTop, cursor)
     }
 
+    /**
+     * @param element {HTMLTextAreaElement}
+     * @param event {KeyboardEvent}
+     */
     check_tab(element, event) {
         let code = element.value;
+        if (!this.autoComplete.keyListener(event)) {
+            event.preventDefault(); // stop normal
+            return
+        }
         if (event.key === "Tab") {
             /* Tab key pressed */
             event.preventDefault(); // stop normal
@@ -129,5 +151,85 @@ class SyntaxHighlighter {
             element.selectionEnd = cursor_pos;
             this.update(element.value); // Update text to include indent
         }
+    }
+
+    /**
+     * @param input {HTMLInputElement, HTMLTextAreaElement}
+     * @returns {null|{start: number, end: number}}
+     */
+    getCursorPos(input) {
+        if ("selectionStart" in input && document.activeElement === input) {
+            return {
+                start: input.selectionStart,
+                end: input.selectionEnd
+            }
+        } else if (input.createTextRange) {
+            var sel = document.selection.createRange();
+            if (sel.parentElement() === input) {
+                var rng = input.createTextRange();
+                rng.moveToBookmark(sel.getBookmark());
+                for (var len = 0;
+                     rng.compareEndPoints("EndToStart", rng) > 0;
+                     rng.moveEnd("character", -1)) {
+                    len++;
+                }
+                rng.setEndPoint("StartToStart", input.createTextRange());
+                for (var pos = {start: 0, end: len};
+                     rng.compareEndPoints("EndToStart", rng) > 0;
+                     rng.moveEnd("character", -1)) {
+                    pos.start++;
+                    pos.end++;
+                }
+                return pos;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param input {HTMLInputElement, HTMLTextAreaElement}
+     * @param start {number}
+     * @param end {number, null}
+     */
+    setCursorPos(input, start, end = null) {
+        if (arguments.length < 3 || end === null) end = start
+        if ("selectionStart" in input) {
+            setTimeout(function () {
+                input.selectionStart = start
+                input.selectionEnd = end
+            }, 1)
+        } else if (input.createTextRange) {
+            var rng = input.createTextRange()
+            rng.moveStart("character", start)
+            rng.collapse()
+            rng.moveEnd("character", end - start)
+            rng.select()
+        }
+    }
+
+    /**
+     * Uses canvas.measureText to compute and return the width of the given text of given font in pixels.
+     *
+     * @param {string} text The text to be rendered.
+     * @param {string} font The css font descriptor that text is to be rendered with (e.g. "bold 14px verdana").
+     *
+     * @see https://stackoverflow.com/questions/118241/calculate-text-width-with-javascript/21015393#21015393
+     */
+    static getTextWidth(text, font) {
+        SyntaxHighlighter.ctx.font = font;
+        const metrics = SyntaxHighlighter.ctx.measureText(text);
+        return metrics.width;
+    }
+
+    static getCssStyle(element, prop) {
+        return window.getComputedStyle(element, null).getPropertyValue(prop);
+    }
+
+    static getCanvasFont(el = document.body) {
+        const fontWeight = SyntaxHighlighter.getCssStyle(el, 'font-weight') || 'normal';
+        const fontSize = SyntaxHighlighter.getCssStyle(el, 'font-size') || '16px';
+        const fontFamily = SyntaxHighlighter.getCssStyle(el, 'font-family') || 'Times New Roman';
+
+        return `${fontWeight} ${fontSize} ${fontFamily}`;
     }
 }

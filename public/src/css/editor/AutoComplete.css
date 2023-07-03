@@ -1,0 +1,42 @@
+.autocomplete {
+    position: absolute;
+    display: none;
+    pointer-events: none;
+    z-index: 2;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
+}
+
+.autocomplete.visible {
+    display: block;
+}
+
+.matches-container {
+    position: absolute;
+    z-index: 2;
+    pointer-events: auto;
+    width: 400px;
+    height: 150px;
+    overflow: auto;
+    background-color: cyan;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
+}
+
+.matches-container .match {
+    background-color: yellow;
+    width: 100%;
+    position: relative;
+}
+
+.matches-container .match.selected {
+    background-color: blue;
+}
+
+.matches-container .match .info {
+    position: absolute;
+    right: 0;
+    color: red;
+}

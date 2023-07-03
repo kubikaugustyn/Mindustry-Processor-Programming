@@ -50,7 +50,7 @@ tab {
     left: 0;*/
 }
 
-.editing, .highlighting {
+.editing, .highlighting, .autocomplete {
     /* Both elements need the same text and space styling so they are directly on top of each other */
     margin: 0 10px 10px;
     padding: 10px 10px 10px calc(var(--lineNumbersWidth) + 15px);

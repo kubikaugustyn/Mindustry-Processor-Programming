@@ -134,6 +134,7 @@ class LoadSaver {
             if (!files) return
             this.#fileSelected(files[0])
             this.#newProjectInFile(name, files[0])
+            this.#loadProject(name)
         }).catch(reason => window.alert("Failed to select file for new project: " + reason))
     }
 

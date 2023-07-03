@@ -127,7 +127,8 @@ class MindustryLexer extends Lexer {
         new MindustryLexer.OPERATOR("asn", "arc-sine", false).proc("asin"),
         new MindustryLexer.OPERATOR("acos", "arc-cosine", false).proc("acos"),
         new MindustryLexer.OPERATOR("atan", "arc-tangent", false).proc("atan"),
-        new MindustryLexer.OPERATOR("of", "of").prec(10) // Custom, @maxItems of smelter1
+        new MindustryLexer.OPERATOR("of", "of").prec(10), // Custom, @sand in smelter1 - bendn wanted it, so it's grammatically correct
+        new MindustryLexer.OPERATOR("in", "in").prec(10) // Custom, @maxItems of smelter1
     ]
     static SET_OP = new MindustryLexer.OPERATOR("=", "set").prec(Infinity);
     static BOOLEAN = ["true", "false"]

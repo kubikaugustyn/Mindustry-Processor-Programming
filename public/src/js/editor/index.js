@@ -158,6 +158,17 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
 }, function (code, color = "blue") {
     this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${code.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
     this.editorElements.code.style.color = color
+}, function (cursor, currentPhrase) {
+    var matches = new Map([
+        ...Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => ["@" + a[0], a[1].toLowerCase().replaceAll("_", " ").replaceAll("|", " OR ")])
+    ])
+    /*matches.set("Apple", "fruit")
+    matches.set("Pine", "other")
+    matches.set("Carrot", "vegetable")
+    matches.set("Pineapple", "fruit")*/
+    if (!currentPhrase) return matches
+    for (var key of matches.keys()) if (!key.toLowerCase().includes(currentPhrase.toLowerCase()) || key === currentPhrase) matches.delete(key)
+    return matches
 })
 document.body.classList.add("split-screen")
 var editor = highlighter.getEditor()
