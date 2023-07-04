@@ -22,6 +22,15 @@ class Compiler {
         this.throwError(msg, node, this)
     }
 
+    warning(msg, node) {
+        if (node) console.log("At node:", node)
+        console.warn("Compilation warning" + (msg ? ": ".concat(msg) : ""))
+    }
+
+    handleWarning(msg, node) {
+        this.warning(msg, node, this)
+    }
+
     constructor() {
 
     }

@@ -43,6 +43,10 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
         throw false
     }
 
+    function onWarning(msg, token, src) {
+        blocksView.addWarnings(false, msg.replaceAll("<", "&lt;").replaceAll("    ", "<tab></tab>").replaceAll("\n", "<br>"))
+    }
+
     try {
         var tokensGenerator = lexer.regenerateTokens(this.editorElements.input.value)
         var tokens = []
@@ -56,6 +60,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
         if (tree) {
             // console.log(tree)
             compiler.throwError = onError.bind(this)
+            compiler.warning = onWarning.bind(this)
             // Compile (Abstract Syntax Tree --> list of ProcessorBlock)
             var processorBlocks = compiler.recompile(tree)
             if (processorBlocks) {
@@ -159,6 +164,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
     this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${code.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
     this.editorElements.code.style.color = color
 }, function (cursor, currentPhrase) {
+    // console.warn("Get matches at", cursor.start, currentPhrase)
     var matches = new Map([
         ...Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => ["@" + a[0], a[1].toLowerCase().replaceAll("_", " ").replaceAll("|", " OR ")])
     ])

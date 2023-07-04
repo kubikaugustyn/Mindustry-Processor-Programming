@@ -145,6 +145,7 @@ class MindustryCompiler extends Compiler {
         ["lessThanEq", "greaterThan"],
         ["lessThan", "greaterThanEq"]
     ])
+    static OF_PROPS = []
 
     static OBFUSCATE = true
 
@@ -200,6 +201,7 @@ class MindustryCompiler extends Compiler {
      */
     compile() {
         if (!MindustryCompiler.DEFAULT_LIB_FUNCTIONS.length) this.createLibFunctions()
+        if (!MindustryCompiler.OF_PROPS.length) this.createOfProps()
         /**
          * @type {Parser.AST}
          */
@@ -347,7 +349,10 @@ class MindustryCompiler extends Compiler {
 
                 name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
                 // If operator is 'of' or 'in'
-                if (node.op.type === MindustryLexer.OPERATORS[39] || node.op.type === MindustryLexer.OPERATORS[40]) this.block(ProcessorTokens.SENSOR, name, right, left)
+                if (node.op.type === MindustryLexer.OPERATORS[39] || node.op.type === MindustryLexer.OPERATORS[40]) {
+                    if (!MindustryCompiler.OF_PROPS.includes(left)) this.handleWarning(`Are you sure that '${left}' property of ${right} really exists? If yes, contact me (there's contacts page on this website if you don't know)`, node)
+                    this.block(ProcessorTokens.SENSOR, name, right, left)
+                }
                 // Else just the operator
                 else this.block(ProcessorTokens.OPERATION, node.op.type.processorString, name, node.op.type.has2inputs ? left : right, node.op.type.has2inputs ? right : null)
                 //console.log(node.op.type, MindustryLexer.OPERATORS)
@@ -767,5 +772,9 @@ class MindustryCompiler extends Compiler {
             new MindustryCompiler.FunctionSignature("ulocate.spawn", {}, {}, []),
             new MindustryCompiler.FunctionSignature("ulocate.damaged", {}, {}, [])
         ]
+    }
+
+    createOfProps() {
+        MindustryCompiler.OF_PROPS = Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => "@" + a[0])
     }
 }

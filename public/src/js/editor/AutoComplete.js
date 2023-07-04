@@ -85,8 +85,8 @@ class AutoComplete {
         var i = 0
         var line = lines.findIndex(a => i + a.length >= cursor.start ? true : (i += a.length + 1, false))
         var col = cursor.start - i
-        //console.log(line, col)
-        var lineWidth = SyntaxHighlighter.getTextWidth(lines[line], SyntaxHighlighter.getCanvasFont(this.highlighter.editorElements.input))
+        // console.log(line, col)
+        var lineWidth = SyntaxHighlighter.getTextWidth(lines[line].slice(0, col), SyntaxHighlighter.getCanvasFont(this.highlighter.editorElements.input))
         this.matchesContainer.style.transform = `translate(${x + lineWidth}px, calc(${y}px + 20pt * ${line + 1}))`
     }
 
@@ -177,7 +177,7 @@ class AutoComplete {
     }
 
     getPhraseStartPos(code, cursor, sep = " ") {
-        return code.lastIndexOf(sep, cursor.start) + 1
+        return code.lastIndexOf(sep, cursor.start - 1) + 1
     }
 
     getPhrase(cursor, sep = " ") {
@@ -185,7 +185,7 @@ class AutoComplete {
          * @type {string}
          */
         var code = this.highlighter.editorElements.input.value
-        return code.substring(this.getPhraseStartPos(code, cursor, sep), cursor.start + 1)
+        return code.substring(this.getPhraseStartPos(code, cursor, sep), cursor.start)
     }
 
     mousedownListener(e) {
