@@ -59,9 +59,20 @@ class ProcessorType {
      */
     properties
     /**
-     * @type {Array<ProcessorTypeValueRule>|undefined}
+     * @type {ProcessorTypeValueRule[]|undefined}
      */
     rules
+
+    constructor() {
+        ProcessorTypes.ALL_INSTANCES.push(this)
+    }
+
+    /**
+     * Used to reload when ALL_ITEMS etc. is changed
+     */
+    reload() {
+
+    }
 
     /**
      * @param other {ProcessorType}
@@ -79,6 +90,9 @@ class ProcessorType {
 class ProcessorTypes {
     static ANY = class extends ProcessorType {
         name = "any"
+    }
+    static NULL = class extends ProcessorType {
+        name = "null"
     }
     static STRING = class extends ProcessorType {
         name = "string"
@@ -118,6 +132,9 @@ class ProcessorTypes {
         ]
     }
     static CONTROLLED_NUMBER = class extends ProcessorTypes.NUMBER {
+        static ctrlProcessor = 1
+        static ctrlPlayer = 2
+        static ctrlCommand = 3
         /*
         1 - @ctrlProcessor - if unit controller is processor
         2 - @ctrlPlayer - if unit/building controller is player
@@ -169,46 +186,60 @@ class ProcessorTypes {
             ["color", "NUMBER"] // Some bullsh*t float but whatever
         ])
     }
-    static ALL_ITEMS = ["copper", "lead", "metaglass", "graphite", "sand", "coal", "titanium", "thorium", "scrap", "silicon", "plastanium", "phase-fabric", "surge-alloy", "spore-pod", "blast-compound", "pyratite", "beryllium", "fissile-matter", "dormant-cyst", "tungsten", "carbide", "oxide"]
-    static ALL_LIQUIDS = ["water", "slag", "oil", "cryofluid", "neoplasm", "hydrogen", "ozone", "cyanogen", "gallium", "nitrogen", "arkycite"]
+    //Team.baseTeams
+    static ALL_BASE_TEAMS = []
+    //ContentType.item - Vars.content.items()
+    static ALL_ITEMS = []
+    //ContentType.liquid - Vars.content.liquids()
+    static ALL_LIQUIDS = []
+    //ContentType.block
+    static ALL_BLOCKS = []
+    //ContentType.unit
+    static ALL_UNITS = []
+    // LAccess.all
+    static ALL_SENSORS = []
     static BUILDING = class extends ProcessorType {
         name = "building"
-        properties = new Map([
-            ...ProcessorTypes.ALL_ITEMS.map(name => [name, "POSITIVE_INTEGER"]),
-            ...ProcessorTypes.ALL_LIQUIDS.map(name => [name, "POSITIVE_INTEGER"]),
-            ["totalItems", "ITEMS_LIQUIDS_NUMBER"],
-            ["firstItem", "CONTENT"],
-            ["totalLiquids", "ITEMS_LIQUIDS_NUMBER"],
-            ["totalPower", "POWER_NUMBER"],
-            ["itemCapacity", "ITEMS_LIQUIDS_NUMBER"],
-            ["liquidCapacity", "ITEMS_LIQUIDS_NUMBER"],
-            ["powerNetStored", "POSITIVE_INTEGER"],
-            ["powerNetCapacity", "POSITIVE_INTEGER"],
-            ["powerNetIn", "POSITIVE_INTEGER"],
-            ["powerNetOut", "POSITIVE_INTEGER"],
-            ["ammo", "POSITIVE_INTEGER"],
-            ["ammoCapacity", "POSITIVE_INTEGER"],
-            ["health", "INTEGER"],
-            ["maxHealth", "INTEGER"],
-            ["heat", "PERCENTAGE_NUMBER"],
-            ["efficiency", "BOOLEAN"],
-            ["timescale", "NUMBER"],
-            ["rotation", "BLOCK_ROTATION_NUMBER"],
-            ["x", "INTEGER"],
-            ["y", "INTEGER"],
-            ["shootX", "INTEGER"],
-            ["shootY", "INTEGER"],
-            ["size", "POSITIVE_INTEGER"],
-            ["range", "POSITIVE_NUMBER"],
-            ["shooting", "BOOLEAN"],
-            ["team", "POSITIVE_INTEGER"],
-            ["type", "CONTENT"],
-            ["controlled", "CONTROLLED_NUMBER"],
-            ["enabled", "BOOLEAN"],
-            ["config", "CONTENT|UNIT"],
-            ["color", "COLOR_NUMBER"]
-        ])
+
+        reload() {
+            this.properties = new Map([
+                ...ProcessorTypes.ALL_ITEMS.map(name => [name, "POSITIVE_INTEGER"]),
+                ...ProcessorTypes.ALL_LIQUIDS.map(name => [name, "POSITIVE_INTEGER"]),
+                ["totalItems", "ITEMS_LIQUIDS_NUMBER"],
+                ["firstItem", "CONTENT"],
+                ["totalLiquids", "ITEMS_LIQUIDS_NUMBER"],
+                ["totalPower", "POWER_NUMBER"],
+                ["itemCapacity", "ITEMS_LIQUIDS_NUMBER"],
+                ["liquidCapacity", "ITEMS_LIQUIDS_NUMBER"],
+                ["powerNetStored", "POSITIVE_INTEGER"],
+                ["powerNetCapacity", "POSITIVE_INTEGER"],
+                ["powerNetIn", "POSITIVE_INTEGER"],
+                ["powerNetOut", "POSITIVE_INTEGER"],
+                ["ammo", "POSITIVE_INTEGER"],
+                ["ammoCapacity", "POSITIVE_INTEGER"],
+                ["health", "INTEGER"],
+                ["maxHealth", "INTEGER"],
+                ["heat", "PERCENTAGE_NUMBER"],
+                ["efficiency", "BOOLEAN"],
+                ["timescale", "NUMBER"],
+                ["rotation", "BLOCK_ROTATION_NUMBER"],
+                ["x", "INTEGER"],
+                ["y", "INTEGER"],
+                ["shootX", "INTEGER"],
+                ["shootY", "INTEGER"],
+                ["size", "POSITIVE_INTEGER"],
+                ["range", "POSITIVE_NUMBER"],
+                ["shooting", "BOOLEAN"],
+                ["team", "POSITIVE_INTEGER"],
+                ["type", "CONTENT"],
+                ["controlled", "CONTROLLED_NUMBER"],
+                ["enabled", "BOOLEAN"],
+                ["config", "CONTENT|UNIT"],
+                ["color", "COLOR_NUMBER"]
+            ])
+        }
     }
+    // Not content type unit, but unit in map, get content type unit by getting @type I think - TODO
     static UNIT = class extends ProcessorType {
         name = "unit"
         properties = new Map([
@@ -242,6 +273,20 @@ class ProcessorTypes {
         ])
     }
 
+    static ALL_TYPES = Object.keys(ProcessorTypes).filter(a => ProcessorTypes.hasOwnProperty(a) && !a.startsWith("ALL_"))
+    /**
+     * @type {ProcessorType[]}
+     */
+    static ALL_INSTANCES = []
+
+    static reloadAll() {
+        ProcessorTypes.ALL_INSTANCES.forEach(type => type.reload())
+    }
+
+    /**
+     * @param name {string}
+     * @returns {ProcessorType}
+     */
     static get(name) {
         return ProcessorTypes[name]
     }

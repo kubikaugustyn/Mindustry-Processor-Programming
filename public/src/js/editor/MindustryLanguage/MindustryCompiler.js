@@ -54,9 +54,24 @@ class MindustryCompiler extends Compiler {
          */
         name
         /**
+         * @type {ProcessorType}
+         */
+        type
+        /**
          * @type {*}
          */
         val
+
+        /**
+         * @param name {string}
+         * @param type {ProcessorType}
+         * @param val {*, null}
+         */
+        constructor(name, type, val = null) {
+            this.name = name
+            this.type = type
+            this.val = val
+        }
     }
     // Used mainly in jump commands
     static DynamicLink = class DynamicLink {
@@ -95,9 +110,7 @@ class MindustryCompiler extends Compiler {
      * @type {FunctionSignature[]}
      */
     static DEFAULT_LIB_FUNCTIONS = []
-    static DEFAULT_CONSTANTS = {
-        "M_PI": new MindustryCompiler.Value(Math.PI)
-    }
+    static DEFAULT_CONSTANTS = []
     /**
      * @type {Map<string, FunctionSignature>}
      */
@@ -146,6 +159,10 @@ class MindustryCompiler extends Compiler {
         ["lessThan", "greaterThanEq"]
     ])
     static OF_PROPS = []
+    /**
+     * @type {ArrayBuffer}
+     */
+    static LogicIDsData
 
     static OBFUSCATE = true
 
@@ -201,7 +218,9 @@ class MindustryCompiler extends Compiler {
      */
     compile() {
         if (!MindustryCompiler.DEFAULT_LIB_FUNCTIONS.length) this.createLibFunctions()
+        if (!MindustryCompiler.DEFAULT_CONSTANTS.length) this.createConstants()
         if (!MindustryCompiler.OF_PROPS.length) this.createOfProps()
+        ProcessorTypes.reloadAll()
         /**
          * @type {Parser.AST}
          */
@@ -774,7 +793,96 @@ class MindustryCompiler extends Compiler {
         ]
     }
 
+    createConstants() {
+        // Basically same as https://github.com/Anuken/Mindustry/blob/master/core/src/mindustry/logic/GlobalVars.java
+        var c = MindustryCompiler.DEFAULT_CONSTANTS = new Array(17) // Minimum of 17 items
+        var co = MindustryCompiler.Constant
+        //add default constants
+        c[0] = new co("false", new ProcessorTypes.BOOLEAN, 0)
+        c[1] = new co("true", new ProcessorTypes.BOOLEAN, 1)
+        c[2] = new co("null", new ProcessorTypes.NULL, null)
+        //math
+        c[3] = new co("@pi", new ProcessorTypes.NUMBER, 3.1415927410125732) // From https://mindustrygame.github.io/docs/constant-values.html#arc.math.Mathf.PI
+        c[4] = new co("π", new ProcessorTypes.NUMBER, 3.1415927410125732) // For the "cool" kids
+        c[5] = new co("@e", new ProcessorTypes.NUMBER, 2.7182817459106445)
+        c[6] = new co("@degToRad", new ProcessorTypes.NUMBER, 0.01745329238474369)
+        c[7] = new co("@radToDeg", new ProcessorTypes.NUMBER, 57.2957763671875)
+        //time
+        c[8] = new co("@time", new ProcessorTypes.POSITIVE_INTEGER, 0)
+        c[9] = new co("@tick", new ProcessorTypes.POSITIVE_INTEGER, 0)
+        c[10] = new co("@second", new ProcessorTypes.POSITIVE_INTEGER, 0)
+        c[11] = new co("@minute", new ProcessorTypes.POSITIVE_INTEGER, 0)
+        c[12] = new co("@waveNumber", new ProcessorTypes.POSITIVE_INTEGER, 0)
+        c[13] = new co("@waveTime", new ProcessorTypes.POSITIVE_INTEGER, 0)
+        //special enums
+        c[14] = new co("@ctrlProcessor", new ProcessorTypes.CONTROLLED_NUMBER, ProcessorTypes.CONTROLLED_NUMBER.ctrlProcessor)
+        c[15] = new co("@ctrlPlayer", new ProcessorTypes.CONTROLLED_NUMBER, ProcessorTypes.CONTROLLED_NUMBER.ctrlPlayer)
+        c[16] = new co("@ctrlCommand", new ProcessorTypes.CONTROLLED_NUMBER, ProcessorTypes.CONTROLLED_NUMBER.ctrlCommand)
+        ////LOAD////
+        //read logic ID mapping data (generated in ImagePacker)
+        if (MindustryCompiler.LogicIDsData) {
+            var read = new DataView(MindustryCompiler.LogicIDsData) // Create reading class
+            var pointer = 0
+            var lookableContent = ["block", "unit", "item", "liquid"]
+            for (var cname of lookableContent) {
+                var amount = read.getInt16(pointer, false)
+                pointer += 2
+
+                //store count constants
+                c.push(new co("@" + cname + "Count", new ProcessorTypes.POSITIVE_INTEGER, amount));
+                console.groupCollapsed(cname, amount)
+                /**
+                 * @type {string[]}
+                 */
+                var names = new Array(amount)
+                for (var i = 0; i < amount; i++) {
+                    var nameLength = read.getInt16(pointer, false)
+                    pointer += 2
+                    var name = ""
+                    for (var j = 0; j < nameLength; j++) name += String.fromCharCode(read.getUint8(pointer++))
+                    console.log(name)
+                    names[i] = name
+                }
+                ProcessorTypes["ALL_" + cname.toUpperCase() + "S"] = names
+                console.groupEnd()
+            }
+        }
+        ////LOAD////
+        //store base content
+        for (var team of ProcessorTypes.ALL_BASE_TEAMS) c.push(new co("@" + team, new ProcessorTypes.CONTENT))
+        for (var item of ProcessorTypes.ALL_ITEMS) c.push(new co("@" + item, new ProcessorTypes.CONTENT))
+        for (var liquid of ProcessorTypes.ALL_LIQUIDS) c.push(new co("@" + liquid, new ProcessorTypes.CONTENT))
+        for (var block of ProcessorTypes.ALL_BLOCKS)
+            //only register blocks that have no item equivalent (this skips sand)
+            if (!ProcessorTypes.ALL_ITEMS.includes(block)) c.push(new co("@" + block, new ProcessorTypes.CONTENT))
+        //used as a special value for any environmental solid block
+        c.push(new co("@solid", new ProcessorTypes.CONTENT)) // put("@solid", Blocks.stoneWall);
+        for (var unit of ProcessorTypes.ALL_UNITS) c.push(new co("@" + unit, new ProcessorTypes.CONTENT))
+        //store sensor constants
+        for (var sensor of ProcessorTypes.ALL_SENSORS) c.push(new co("@" + sensor, new ProcessorTypes.ANY))
+        //read logic ID mapping data (generated in ImagePacker)
+        // MOVED UP
+    }
+
     createOfProps() {
         MindustryCompiler.OF_PROPS = Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => "@" + a[0])
+    }
+
+    static {
+        var http = new XMLHttpRequest()
+        // <CORE>/editor/ or <CORE>/docs/ - doesn't matter
+        var rootURL = document.location.origin + document.location.pathname
+        // <CORE>/src/js/editor/ProcessorLanguage/logicids.dat
+        http.open("GET", rootURL.substring(0, rootURL.lastIndexOf('/', rootURL.length - 2)) + "/src/js/editor/ProcessorLanguage/logicids.dat", true)
+        http.responseType = "arraybuffer"
+        http.onreadystatechange = (function (event) {
+            if (this.readyState !== XMLHttpRequest.DONE) return
+            if (this.status !== 200) {
+                console.warn("Oh no:", this.status, this.statusText)
+                return
+            }
+            MindustryCompiler.LogicIDsData = this.response
+        }).bind(http)
+        http.send()
     }
 }
