@@ -65,6 +65,7 @@ class ProcessorType {
 
     constructor() {
         ProcessorTypes.ALL_INSTANCES.push(this)
+        this.reload()
     }
 
     /**
@@ -187,17 +188,23 @@ class ProcessorTypes {
         ])
     }
     //Team.baseTeams
-    static ALL_BASE_TEAMS = []
+    static ALL_BASE_TEAMS = ["derelict", "sharded", "crux", "malis", "green", "blue"]
     //ContentType.item - Vars.content.items()
     static ALL_ITEMS = []
     //ContentType.liquid - Vars.content.liquids()
     static ALL_LIQUIDS = []
-    //ContentType.block
+    //ContentType.block - Vars.content.blocks()
     static ALL_BLOCKS = []
-    //ContentType.unit
+    //ContentType.unit - Vars.content.units()
     static ALL_UNITS = []
     // LAccess.all
-    static ALL_SENSORS = []
+    static ALL_SENSORS = ['totalItems', 'firstItem', 'totalLiquids', 'totalPower', 'itemCapacity', 'liquidCapacity', 'powerCapacity', 'powerNetStored', 'powerNetCapacity', 'powerNetIn', 'powerNetOut', 'ammo', 'ammoCapacity', 'health', 'maxHealth', 'heat', 'efficiency', 'progress', 'timescale', 'rotation', 'x', 'y', 'shootX', 'shootY', 'size', 'dead', 'range', 'shooting', 'boosting', 'mineX', 'mineY', 'mining', 'speed', 'team', 'type', 'flag', 'controlled', 'controller', 'name', 'payloadCount', 'payloadType', 'enabled', 'shoot', 'shootp', 'config', 'color']
+    // LAccess.senseable
+    static ALL_SENSEABLE = ['totalItems', 'firstItem', 'totalLiquids', 'totalPower', 'itemCapacity', 'liquidCapacity', 'powerCapacity', 'powerNetStored', 'powerNetCapacity', 'powerNetIn', 'powerNetOut', 'ammo', 'ammoCapacity', 'health', 'maxHealth', 'heat', 'efficiency', 'progress', 'timescale', 'rotation', 'x', 'y', 'shootX', 'shootY', 'size', 'dead', 'range', 'shooting', 'boosting', 'mineX', 'mineY', 'mining', 'speed', 'team', 'type', 'flag', 'controlled', 'controller', 'name', 'payloadCount', 'payloadType', 'enabled', 'config', 'color']
+    // LAccess.controls
+    static ALL_CONTROLS = ['enabled', 'shoot', 'shootp', 'config', 'color']
+    // LAccess.settable - Wtf
+    static ALL_SETTABLE = ['x', 'y', 'rotation', 'team', 'flag', 'health', 'totalPower', 'payloadType']
     static BUILDING = class extends ProcessorType {
         name = "building"
 

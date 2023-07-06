@@ -166,13 +166,15 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
 }, function (cursor, currentPhrase) {
     // console.warn("Get matches at", cursor.start, currentPhrase)
     var matches = new Map([
-        ...Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => ["@" + a[0], a[1].toLowerCase().replaceAll("_", " ").replaceAll("|", " OR ")])
+        //...Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => ["@" + a[0], a[1].toLowerCase().replaceAll("_", " ").replaceAll("|", " OR ")]),
+        ...MindustryCompiler.DEFAULT_CONSTANTS.map(a => [a.name, /*typeof a.val !== "undefined" ? a.val : (*/a.type ? a.type.name.toLowerCase().replaceAll("_", " ") : "constant"/*)*/])
     ])
     /*matches.set("Apple", "fruit")
     matches.set("Pine", "other")
     matches.set("Carrot", "vegetable")
     matches.set("Pineapple", "fruit")*/
     if (!currentPhrase) return matches
+    // console.log(matches.entries())
     for (var key of matches.keys()) if (!key.toLowerCase().includes(currentPhrase.toLowerCase()) || key === currentPhrase) matches.delete(key)
     return matches
 })

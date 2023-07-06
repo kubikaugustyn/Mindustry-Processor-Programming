@@ -105,6 +105,7 @@ class MindustryTokens {
                 "text-decoration-style": "wavy",
                 "text-decoration-color": "red"
             },
+            "constant": {color: "rgb(19,218,143)"},
             "variable": {color: "rgb(36, 143, 143)"},
             "param": {color: "green"},
             "label": {color: "lightgreen"},

@@ -158,15 +158,15 @@ class MindustryLexer extends Lexer {
     static LABEL_PHRASE_PREFIX = ":"
     static VALIDATE_PHRASE = function (phrase) {
         if (phrase.includes(MindustryLexer.PARAM_PHRASE_PREFIX)) {
-            return /^[a-zA-Z0-9.\-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)
+            return /^[a-zA-Z0-9π.\-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)
         }
         if (phrase.includes(MindustryLexer.LABEL_PHRASE_PREFIX)) {
-            return /^[a-zA-Z0-9.\-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)
+            return /^[a-zA-Z0-9π.\-]+$/.test(phrase.slice(1)) && phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)
         }
-        return /^[a-zA-Z0-9.\-_]+$/.test(phrase)
+        return /^[a-zA-Z0-9π.\-_]+$/.test(phrase)
     }
     static VALIDATE_PHRASE_CHAR = function (char) {
-        return /[a-zA-Z0-9.@\-_]/.test(char) || MindustryLexer.PARAM_PHRASE_PREFIX.includes(char) || MindustryLexer.LABEL_PHRASE_PREFIX.includes(char)
+        return /[a-zA-Z0-9π.@\-_]/.test(char) || MindustryLexer.PARAM_PHRASE_PREFIX.includes(char) || MindustryLexer.LABEL_PHRASE_PREFIX.includes(char)
     };
 
     * generateTokens() {
@@ -254,7 +254,8 @@ class MindustryLexer extends Lexer {
                 // if (!MindustryLexer.VALIDATE_PHRASE(phrase)) throw new Error(`Illegal non-alphanumeric or @ or . character in '${phrase}' phrase.`)
                 if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "param", phrase)
                 else if (phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "label", phrase)
-                else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, "boolean", phrase)
+                //else if (MindustryCompiler.DEFAULT_CONSTANTS.find(a => a.name === phrase)) yield this.createToken(MindustryTokens.PHRASE, "constant", phrase)
+                else if (MindustryLexer.BOOLEAN.includes(phrase) || phrase === "null" || phrase === "π") yield this.createToken(MindustryTokens.VALUE, "boolean", phrase)
                 // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, "", phrase)
                 else if (MindustryLexer.DIGITS.includes(phrase.slice(-1))) yield this.createToken(MindustryTokens.PHRASE, "link", phrase)
                 else yield this.createToken(MindustryTokens.PHRASE, "", phrase)

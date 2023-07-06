@@ -110,6 +110,9 @@ class MindustryCompiler extends Compiler {
      * @type {FunctionSignature[]}
      */
     static DEFAULT_LIB_FUNCTIONS = []
+    /**
+     * @type {Constant[]}
+     */
     static DEFAULT_CONSTANTS = []
     /**
      * @type {Map<string, FunctionSignature>}
@@ -158,7 +161,6 @@ class MindustryCompiler extends Compiler {
         ["lessThanEq", "greaterThan"],
         ["lessThan", "greaterThanEq"]
     ])
-    static OF_PROPS = []
     /**
      * @type {ArrayBuffer}
      */
@@ -219,7 +221,6 @@ class MindustryCompiler extends Compiler {
     compile() {
         if (!MindustryCompiler.DEFAULT_LIB_FUNCTIONS.length) this.createLibFunctions()
         if (!MindustryCompiler.DEFAULT_CONSTANTS.length) this.createConstants()
-        if (!MindustryCompiler.OF_PROPS.length) this.createOfProps()
         ProcessorTypes.reloadAll()
         /**
          * @type {Parser.AST}
@@ -369,7 +370,7 @@ class MindustryCompiler extends Compiler {
                 name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
                 // If operator is 'of' or 'in'
                 if (node.op.type === MindustryLexer.OPERATORS[39] || node.op.type === MindustryLexer.OPERATORS[40]) {
-                    if (!MindustryCompiler.OF_PROPS.includes(left)) this.handleWarning(`Are you sure that '${left}' property of ${right} really exists? If yes, contact me (there's contacts page on this website if you don't know)`, node)
+                    if (!ProcessorTypes.ALL_SENSEABLE.includes(left.slice(1)) && !ProcessorTypes.ALL_ITEMS.includes(left.slice(1)) && !ProcessorTypes.ALL_LIQUIDS.includes(left.slice(1))) this.handleWarning(`Are you sure that '${left}' property of ${right} really exists? If yes, contact me (there's contacts page on this website if you don't know)`, node)
                     this.block(ProcessorTokens.SENSOR, name, right, left)
                 }
                 // Else just the operator
@@ -830,7 +831,7 @@ class MindustryCompiler extends Compiler {
 
                 //store count constants
                 c.push(new co("@" + cname + "Count", new ProcessorTypes.POSITIVE_INTEGER, amount));
-                console.groupCollapsed(cname, amount)
+                // console.groupCollapsed(cname, amount)
                 /**
                  * @type {string[]}
                  */
@@ -840,11 +841,11 @@ class MindustryCompiler extends Compiler {
                     pointer += 2
                     var name = ""
                     for (var j = 0; j < nameLength; j++) name += String.fromCharCode(read.getUint8(pointer++))
-                    console.log(name)
+                    // console.log(name)
                     names[i] = name
                 }
                 ProcessorTypes["ALL_" + cname.toUpperCase() + "S"] = names
-                console.groupEnd()
+                // console.groupEnd()
             }
         }
         ////LOAD////
@@ -862,10 +863,6 @@ class MindustryCompiler extends Compiler {
         for (var sensor of ProcessorTypes.ALL_SENSORS) c.push(new co("@" + sensor, new ProcessorTypes.ANY))
         //read logic ID mapping data (generated in ImagePacker)
         // MOVED UP
-    }
-
-    createOfProps() {
-        MindustryCompiler.OF_PROPS = Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => "@" + a[0])
     }
 
     static {
