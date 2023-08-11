@@ -64,6 +64,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
             // Compile (Abstract Syntax Tree --> list of ProcessorBlock)
             var processorBlocks = compiler.recompile(tree)
             if (processorBlocks) {
+                //console.log(MindustryCompiler.addedVarsCache, MindustryCompiler.addedFuncsCache)
                 // console.log(processorBlocks)
                 blocksView.setBlocks(processorBlocks)
             }
@@ -167,6 +168,9 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
     // console.warn("Get matches at", cursor.start, currentPhrase)
     var matches = new Map([
         //...Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => ["@" + a[0], a[1].toLowerCase().replaceAll("_", " ").replaceAll("|", " OR ")]),
+        ...MindustryCompiler.addedVarsCache.map(a => [a, "Variable"]),
+        ...MindustryCompiler.addedFuncsCache.map(a => [a, "Function"]),
+        ...Array.from(MindustryCompiler.libFunctions.entries()).map(([name, sig]) => [`${Object.keys(sig.returns).length ? Object.keys(sig.returns).join(", ").concat(" = ") : ""}${name}(${Object.keys(sig.arguments).join(", ")})`, "Lib Function"]),
         ...MindustryCompiler.DEFAULT_CONSTANTS.map(a => [a.name, /*typeof a.val !== "undefined" ? a.val : (*/a.type ? a.type.name.toLowerCase().replaceAll("_", " ") : "constant"/*)*/])
     ])
     /*matches.set("Apple", "fruit")

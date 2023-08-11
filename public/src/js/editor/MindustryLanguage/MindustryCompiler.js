@@ -185,6 +185,8 @@ class MindustryCompiler extends Compiler {
     }
     static varNamesPool = new MindustryCompiler.VarNamesPool()
     static blocks = new Parser.ArrayBuffer()
+    static addedVarsCache
+    static addedFuncsCache;
 
     /**
      * @param functions {FunctionSignature[]}
@@ -324,6 +326,8 @@ class MindustryCompiler extends Compiler {
         var del = arguments.length === 2
         addedFuncs = addedFuncs || []
         addedVars = addedVars || []
+        MindustryCompiler.addedFuncsCache = addedFuncs
+        MindustryCompiler.addedVarsCache = addedVars
 
         for (var i = 0; i < nodes.length; i++) {
             this.compileStatement(ast, ast.nodePool[nodes[i]], addedFuncs, addedVars)
@@ -397,6 +401,7 @@ class MindustryCompiler extends Compiler {
                 //this.block(ProcessorTokens.SET, name, this.getNumberValue(node))
                 val = this.getNumberValue(node)
                 if (name) {
+                    name = this.variable(ProcessorTypes.NUMBER, addedVars, name)
                     this.block(ProcessorTokens.SET, name, val)
                 } else name = val
                 break
@@ -492,6 +497,9 @@ class MindustryCompiler extends Compiler {
                     //console.log("Continue", node.keyword)
                     if (typeof MindustryCompiler.continueTarget === "undefined") this.error(MindustryCompiler.RuntimeError.INVALID_BREAK_CONTINUE, node)
                     this.block(ProcessorTokens.JUMP, MindustryCompiler.continueTarget, "always")
+                } else if (node.keyword.type === "FUNCTION") {
+                    console.log("Function", node.keyword)
+                    name = this.function(ast, node.keyword.paramNames, addedFuncs, addedVars, name)
                 } else console.log("Keyword:", node)
                 break
             default:
@@ -613,6 +621,28 @@ class MindustryCompiler extends Compiler {
         var sig = new MindustryCompiler.VariableSignature(name, type)
         MindustryCompiler.variables.set(name, sig)
         return name
+    }
+
+    /**
+     * @param ast {AST}
+     * @param args {string[]}
+     * @param addedFuncs {string[]}
+     * @param addedVars {string[]}
+     * @param name {string, undefined}
+     * @returns {string}
+     */
+    function(ast, args, addedFuncs, addedVars, name = undefined) {
+        this.error(MindustryCompiler.RuntimeError.UNSUPPORTED_NODE_TYPE)
+        /*if (!name) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT)
+        addedFuncs.push(name)
+        var sig = new MindustryCompiler.FunctionSignature(
+            name,
+            Object.fromEntries(args.map(a => [a, "*"])),
+            {"tmp__return": "*"},
+            this.compileStatements(ast, code, addedFuncs, addedVars)
+        )
+        MindustryCompiler.functions.set(name, sig)
+        return name*/
     }
 
     /**

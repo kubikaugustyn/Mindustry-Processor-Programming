@@ -47,6 +47,7 @@ class AutoComplete {
     }
 
     updateMatches(matches, scrollToMatch = true) {
+        this.boundMatchesMovement(matches)
         this.matchesContainer.innerHTML = ""
         var i = 0
         var currentMatchDiv
@@ -81,6 +82,7 @@ class AutoComplete {
     }
 
     moveTo(x, y, cursor) {
+        this.updateMatches(this.getMatches(cursor), true)
         var lines = this.highlighter.editorElements.input.value.split("\n")
         var i = 0
         var line = lines.findIndex(a => i + a.length >= cursor.start ? true : (i += a.length + 1, false))
@@ -171,13 +173,21 @@ class AutoComplete {
             return true
         }
         this.currentMatch += up ? -1 : 1
-        if (this.currentMatch < 0) this.currentMatch = matches.size - 1
-        if (this.currentMatch >= matches.size) this.currentMatch = 0
+        this.boundMatchesMovement(matches)
         this.updateMatches(matches)
     }
 
+    boundMatchesMovement(matches) {
+        if (this.currentMatch < 0) this.currentMatch = matches.size - 1
+        if (this.currentMatch >= matches.size) this.currentMatch = 0
+    }
+
     getPhraseStartPos(code, cursor, sep = " ") {
-        return code.lastIndexOf(sep, cursor.start - 1) + 1
+        return Math.max(
+            0,
+            code.lastIndexOf(sep, cursor.start - 1) + 1,
+            code.lastIndexOf("\n", cursor.start - 1) + 1
+        )
     }
 
     getPhrase(cursor, sep = " ") {
