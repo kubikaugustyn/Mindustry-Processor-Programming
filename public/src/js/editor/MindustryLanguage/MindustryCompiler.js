@@ -477,7 +477,9 @@ class MindustryCompiler extends Compiler {
                     var whileCodeJump = new MindustryCompiler.DynamicLink
                     var whileConditionJump = new MindustryCompiler.DynamicLink
                     var afterWhileJump = new MindustryCompiler.DynamicLink
-                    this.block(ProcessorTokens.JUMP, whileConditionJump, "always") // Jump to the condition of while (what if even first iteration shouldn't start)
+                    // Jump to the condition of while (what if even first iteration shouldn't start?) or skip the while
+                    var conditionReverse = MindustryCompiler.OPReverse.get(jmpType) || "always"
+                    this.block(ProcessorTokens.JUMP, afterWhileJump, conditionReverse, left, right)
                     whileCodeJump.target = MindustryCompiler.blocks.length
                     var oldBreakTarget = MindustryCompiler.breakTarget
                     var oldContinueTarget = MindustryCompiler.continueTarget

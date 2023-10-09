@@ -18,6 +18,10 @@ class ProcessorBlocksView {
      */
     errors
     /**
+     * @type {boolean}
+     */
+    blocksMode
+    /**
      * @type {HTMLDivElement}
      */
     container
@@ -45,6 +49,26 @@ class ProcessorBlocksView {
      * @type {HTMLButtonElement}
      */
     copyButton
+    /**
+     * @type {HTMLDivElement}
+     */
+    modeSwitch
+    /**
+     * @type {HTMLInputElement}
+     */
+    modeSwitchBlocks
+    /**
+     * @type {HTMLInputElement}
+     */
+    modeSwitchRaw
+    /**
+     * @type {HTMLLabelElement}
+     */
+    modeSwitchBlocksLabel
+    /**
+     * @type {HTMLLabelElement}
+     */
+    modeSwitchRawLabel
 
     /**
      * @param container {HTMLDivElement}
@@ -53,25 +77,77 @@ class ProcessorBlocksView {
     constructor(container = null, copyButton = null) {
         this.container = container || document.createElement("div")
         this.container.classList.add("processor-blocks")
+
         this.scrollContainer = document.createElement("div")
         this.scrollContainer.classList.add("container")
+
         this.blocksContainer = document.createElement("div")
         this.blocksContainer.classList.add("blocks-container")
+
         this.warningsContainer = document.createElement("div")
         this.warningsContainer.classList.add("warnings-container")
+
         this.errorsContainer = document.createElement("div")
         this.errorsContainer.classList.add("errors-container")
+
         this.copyElement = document.createElement("textarea")
         this.copyButton = copyButton || document.createElement("button")
         this.copyButton.addEventListener("click", this.copyToClipboard.bind(this))
+
+        this.updateMode()
+        this.modeSwitch = document.createElement("div")
+        this.modeSwitch.classList.add("mode-switch")
+        this.modeSwitch.addEventListener("click", this.updateMode.bind(this))
+
+        this.modeSwitchBlocks = document.createElement("input")
+        this.modeSwitchBlocks.type = "radio"
+        this.modeSwitchBlocks.value = "blocks"
+        this.modeSwitchBlocks.name = "mode-switch-input"
+        this.modeSwitchBlocks.id = "mode-switch-input-blocks"
+        this.modeSwitchBlocks.checked = this.blocksMode
+        this.modeSwitchBlocksLabel = document.createElement("label")
+        this.modeSwitchBlocksLabel.innerText = "Blocks"
+        this.modeSwitchBlocksLabel.htmlFor = "mode-switch-input-blocks"
+        this.modeSwitchRaw = document.createElement("input")
+        this.modeSwitchRaw.type = "radio"
+        this.modeSwitchRaw.value = "raw"
+        this.modeSwitchRaw.name = "mode-switch-input"
+        this.modeSwitchRaw.id = "mode-switch-input-raw"
+        this.modeSwitchRaw.checked = !this.blocksMode
+        this.modeSwitchRawLabel = document.createElement("label")
+        this.modeSwitchRawLabel.innerText = "Raw"
+        this.modeSwitchRawLabel.htmlFor = "mode-switch-input-raw"
+
         this.container.appendChild(this.copyButton)
         this.container.appendChild(this.copyElement)
+        this.container.appendChild(this.modeSwitch)
+        this.modeSwitch.appendChild(this.modeSwitchBlocks)
+        this.modeSwitch.appendChild(this.modeSwitchBlocksLabel)
+        this.modeSwitch.appendChild(this.modeSwitchRaw)
+        this.modeSwitch.appendChild(this.modeSwitchRawLabel)
         this.container.appendChild(this.scrollContainer)
         this.scrollContainer.appendChild(this.warningsContainer)
         this.scrollContainer.appendChild(this.errorsContainer)
         this.scrollContainer.appendChild(this.blocksContainer)
+
         this.warnings = []
         this.errors = []
+    }
+
+    /**
+     * @param type {string|undefined|MouseEvent}
+     */
+    updateMode(type = undefined) {
+        var newMode
+        if (type instanceof MouseEvent) {
+            newMode = this.modeSwitchBlocks.checked
+            localStorage.setItem("blocks-view-mode", newMode ? "blocks" : "raw")
+        } else if (type) {
+            newMode = type === "blocks"
+            localStorage.setItem("blocks-view-mode", type)
+        } else newMode = localStorage.getItem("blocks-view-mode") !== "raw"
+        this.blocksMode = newMode
+        this.render()
     }
 
     copyToClipboard(code = undefined) {
@@ -130,11 +206,13 @@ class ProcessorBlocksView {
         if (!this.blocksContainer) return
         if (!this.warningsContainer) return
         if (!this.errorsContainer) return
+        if (!this.blocks) return
         if (ProcessorBlocksView.DEBUG_LOG) console.groupCollapsed("Render processor blocks")
         if (ProcessorBlocksView.DEBUG_LOG) console.log(this.blocks)
         this.copyButton.disabled = !this.blocks.length
         this.blocksContainer.innerHTML = ""
-        for (var [i, block] of Object.entries(this.blocks)) {
+        var i, block
+        if (this.blocksMode) for ([i, block] of Object.entries(this.blocks)) {
             var blockDiv = document.createElement("div")
             blockDiv.classList.add("processor-block", "category-" + block.normalizeCategory())
             this.blocksContainer.appendChild(blockDiv)
@@ -157,6 +235,18 @@ class ProcessorBlocksView {
             contentDiv.classList.add("content")
             contentDiv.innerHTML = block.applyFormat(param => `<span class="param">${param}</span>`)
             blockDiv.appendChild(contentDiv)
+        }
+        else {
+            var rawTextarea = document.createElement("textarea")
+            rawTextarea.classList.add("processor-raw")
+            this.blocksContainer.appendChild(rawTextarea)
+
+            for (block of this.blocks) {
+                console.log(block)
+                rawTextarea.value += block.params.join(" ") + "\n"
+            }
+
+            rawTextarea.style.height = rawTextarea.scrollHeight + "px"
         }
         this.warningsContainer.innerHTML = ""
         var firstLineEnd, firstLine, rest

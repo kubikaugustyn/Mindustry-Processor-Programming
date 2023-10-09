@@ -14,6 +14,19 @@
     content: "Copy to clipboard";
 }
 
+.processor-blocks .mode-switch {
+    display: inline;
+}
+
+textarea.processor-raw {
+    display: block;
+    resize: none;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    width: calc(100% - calc(var(--scale) * 20px));
+    height: 100%;
+}
+
 .processor-blocks .container .warnings-container {
     color: orange;
 }
@@ -42,7 +55,7 @@
     --categoryColor: rgb(199, 181, 157);
 }
 
-.processor-block, .processor-block * {
+.processor-block, .processor-block *, textarea.processor-raw {
     --scale: .5;
 }
 

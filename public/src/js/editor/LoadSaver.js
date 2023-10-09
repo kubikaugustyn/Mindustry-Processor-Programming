@@ -5,7 +5,7 @@ var __author__ = "kubik.augustyn@post.cz"
 
 class LoadSaver {
     static LocalStoragePrefix = "load_saver-"
-    static PropertiesFile = "project.properties"
+    //static PropertiesFile = "project.properties"
     static CanAccessFilesystem = typeof window.showSaveFilePicker !== "undefined"
     /**
      * @type {HTMLDivElement}
