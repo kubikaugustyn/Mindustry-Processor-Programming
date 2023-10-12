@@ -259,7 +259,12 @@ class MindustryCompiler extends Compiler {
             /**
              * @type {Parser.ASTNode}
              */
-            if (!MindustryCompiler.errorNode || !MindustryCompiler.error) this.handleError(e)
+            if (!MindustryCompiler.errorNode || !MindustryCompiler.error) {
+                console.groupCollapsed("The actual error:")
+                console.error(e)
+                console.groupEnd()
+                this.handleError(e)
+            }
             switch (MindustryCompiler.error) {
                 case MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT:
                     errMsg = "INVALID ASSIGNMENT"
@@ -536,7 +541,7 @@ class MindustryCompiler extends Compiler {
          */
         var func = MindustryCompiler.libFunctions.get(node.phrase.name) || MindustryCompiler.functions.get(node.phrase.name)
         // If function doesn't even exist
-        if (!func) this.handleError(MindustryCompiler.RuntimeError.UNDEFINED_FUNCTION, node)
+        if (!func) this.error(MindustryCompiler.RuntimeError.UNDEFINED_FUNCTION, node)
         // If arguments count don't match
         if (Object.keys(func.arguments).length !== node.phrase.params.length) this.error(MindustryCompiler.RuntimeError.INVALID_PARAMS, node)
         // If return count don't match

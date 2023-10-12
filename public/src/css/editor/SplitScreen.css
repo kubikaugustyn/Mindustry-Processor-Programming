@@ -2,19 +2,22 @@
     width: 100%;
     height: 100%;
     margin: 0;
+    --centerLineWidthHalf: 2px;
 }
 
 .split-screen .left {
     float: left;
     height: 100%;
-    width: 50%;
+    width: calc(50% - var(--centerLineWidthHalf));
     position: absolute;
+    border-right: var(--centerLineWidthHalf) solid black;
 }
 
 .split-screen .right {
     float: right;
     height: 100%;
-    width: 50%;
+    width: calc(50% - var(--centerLineWidthHalf));
+    border-left: var(--centerLineWidthHalf) solid black;
 }
 
 .split-screen .clear {

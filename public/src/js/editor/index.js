@@ -10,12 +10,13 @@ function blocksContainerError(msg) {
     /*blocksView.getBlocksContainer().style.color = "red"
     blocksView.getBlocksContainer().innerHTML = msg*/
     if (msg instanceof Error) {
-        //console.log("Error...", msg.name, msg.cause, msg.stack, msg.message)
+        // console.log("Error...", msg.name, msg.cause, msg.stack, msg.message)
         /*ProcessorBlocksView.DEBUG_LOG = true
         blocksView.copyToClipboard(msg.stack)
         ProcessorBlocksView.DEBUG_LOG = false*/
         msg = msg.stack || msg.name + msg.message
     }
+    console.log(msg)
     blocksView.addErrors(false, msg.replaceAll("<", "&lt;").replaceAll("    ", "<tab></tab>").replaceAll("\n", "<br>"))
     blocksView.setBlocks([])
 }
@@ -150,6 +151,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
     } catch (e) {
         if (e?.name) {
             if (e?.token) try {
+                console.log("Throw")
                 onError.bind(this)(e, e.token)
             } catch {
             }
@@ -164,6 +166,8 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
 }, function (code, color = "blue") {
     this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${code.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
     this.editorElements.code.style.color = color
+    blocksView.clearWarnings()
+    blocksView.clearErrors()
 }, function (cursor, currentPhrase) {
     // console.warn("Get matches at", cursor.start, currentPhrase)
     var matches = new Map([
@@ -331,9 +335,7 @@ while (i < 100){
 }`,
     `control.enabled(press1, 0)`,
     `outX, outY, found = ulocate.ore(@copper)`,
-    `a = rand 9
-b = 6 max a
-c = a max b`,
+    `a = rand 9\nb = 6 max a\nc = a max b`,
     `result = read(cell1, 0)\nwrite(cell1, 0, result)`,
     `a = 9\n## Test\na = read(cell1, 0) ## Reads cell1`,
     `##Test of multiline\na = 9\n#* Test\nTest1*#\na = read(cell1, 0) #*Reads cell1\netc.*#`,
@@ -343,10 +345,11 @@ c = a max b`,
     "a = 0caabbccdd",
     "## Store a and b into c\na = 123 ## 8 bits (0 - 255)\nb = 231 ## 8 bits\nc = a << 8 + b\nwrite(cell1, 0, c)\n\n## Back\nc = read(cell1, 0)\nb = c b-and 0xFF\na = (c >> 8) b-and 0xFF",
     "if (a not 8 + 6){\n\ta = 8\n}\nelse {\n\ta = rand 100\n}",
-    "target = @titanium\nwhile (a < @itemsCount){\n\tcmp = lookup.item(a)\n\tif (cmp == target) {\n\t\tbreak\n\t}\n\ta = a + 1\n}",
-    "cmp = lookup.item(a)\nif (cmp == target) {\n\ta = 7\n}\nelse {\n\ta = rand 92\n}\nb = 72 max a"
+    "target = @titanium\na = 0\nwhile (a < @itemsCount){\n\tcmp = lookup.item(a)\n\tif (cmp == target) {\n\t\tbreak\n\t}\n\ta = a + 1\n}",
+    "cmp = lookup.item(a)\nif (cmp == target) {\n\ta = 7\n}\nelse {\n\ta = rand 92\n}\nb = 72 max a",
+    "ubind.thisFlag(@mono)\n## Is the equivalent of these functions:\nflag = ubind.getThisFlag()\nubind.flag(@mono, flag)\n\n#*\nWhat if you want to ensure that the functions won't loop indefinetly,\nbecause there's no such unit with that flag?\nUse these functions instead (they take up more instructions though)\n*#\nubind.thisFlagLimited(@mono, 10)\n## Is the equivalent of these functions:\nflag = ubind.getThisFlag()\nubind.flagLimited(@mono, flag, 10)"
 ]
-highlighter.editorElements.input.value = codeExamples[21]
+highlighter.editorElements.input.value = codeExamples[23]
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")
 blocksViewContainer.style.height = "calc(100vh - 21px)"

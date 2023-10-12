@@ -1,5 +1,5 @@
 .processor-blocks {
-    margin: 10px;
+    padding: 10px; /*Necessary, so it doesn't break the split screen.*/
 }
 
 .processor-blocks textarea {
@@ -21,8 +21,7 @@
 textarea.processor-raw {
     display: block;
     resize: none;
-    overflow-x: scroll;
-    overflow-y: hidden;
+    overflow: hidden;
     width: calc(100% - calc(var(--scale) * 20px));
     height: 100%;
 }

@@ -98,25 +98,28 @@ class ProcessorBlocksView {
         this.modeSwitch = document.createElement("div")
         this.modeSwitch.classList.add("mode-switch")
         this.modeSwitch.addEventListener("click", this.updateMode.bind(this))
+        addEventListener("processorBlocksViewModeUpdate", this.updateMode.bind(this))
+        addEventListener("storage", this.updateMode.bind(this))
 
+        var id = "-" + Math.random().toString(36).slice(2)
         this.modeSwitchBlocks = document.createElement("input")
         this.modeSwitchBlocks.type = "radio"
         this.modeSwitchBlocks.value = "blocks"
-        this.modeSwitchBlocks.name = "mode-switch-input"
-        this.modeSwitchBlocks.id = "mode-switch-input-blocks"
+        this.modeSwitchBlocks.name = "mode-switch-input" + id
+        this.modeSwitchBlocks.id = "mode-switch-input-blocks" + id
         this.modeSwitchBlocks.checked = this.blocksMode
         this.modeSwitchBlocksLabel = document.createElement("label")
         this.modeSwitchBlocksLabel.innerText = "Blocks"
-        this.modeSwitchBlocksLabel.htmlFor = "mode-switch-input-blocks"
+        this.modeSwitchBlocksLabel.htmlFor = "mode-switch-input-blocks" + id
         this.modeSwitchRaw = document.createElement("input")
         this.modeSwitchRaw.type = "radio"
         this.modeSwitchRaw.value = "raw"
-        this.modeSwitchRaw.name = "mode-switch-input"
-        this.modeSwitchRaw.id = "mode-switch-input-raw"
+        this.modeSwitchRaw.name = "mode-switch-input" + id
+        this.modeSwitchRaw.id = "mode-switch-input-raw" + id
         this.modeSwitchRaw.checked = !this.blocksMode
         this.modeSwitchRawLabel = document.createElement("label")
         this.modeSwitchRawLabel.innerText = "Raw"
-        this.modeSwitchRawLabel.htmlFor = "mode-switch-input-raw"
+        this.modeSwitchRawLabel.htmlFor = "mode-switch-input-raw" + id
 
         this.container.appendChild(this.copyButton)
         this.container.appendChild(this.copyElement)
@@ -135,19 +138,35 @@ class ProcessorBlocksView {
     }
 
     /**
-     * @param type {string|undefined|MouseEvent}
+     * @param type {string|undefined|MouseEvent|CustomEvent|StorageEvent}
      */
     updateMode(type = undefined) {
+        // Manages events as well, so all classes of this type know about a change
         var newMode
         if (type instanceof MouseEvent) {
             newMode = this.modeSwitchBlocks.checked
             localStorage.setItem("blocks-view-mode", newMode ? "blocks" : "raw")
+        } else if (type instanceof StorageEvent) {
+            if (type.key === "blocks-view-mode") newMode = type.newValue !== "raw"
+        } else if (type instanceof CustomEvent) {
+            var info = type.detail
+            if (info.source !== this) newMode = info.blocksMode
         } else if (type) {
             newMode = type === "blocks"
             localStorage.setItem("blocks-view-mode", type)
         } else newMode = localStorage.getItem("blocks-view-mode") !== "raw"
-        this.blocksMode = newMode
-        this.render()
+        if (this.blocksMode !== newMode) {
+            if (!(type instanceof CustomEvent)) dispatchEvent(new CustomEvent("processorBlocksViewModeUpdate", {
+                detail: {
+                    blocksMode: newMode,
+                    source: this
+                }
+            }))
+            if (this.modeSwitchBlocks) this.modeSwitchBlocks.checked = newMode
+            if (this.modeSwitchRaw) this.modeSwitchRaw.checked = !newMode
+            this.blocksMode = newMode
+            this.render()
+        }
     }
 
     copyToClipboard(code = undefined) {
@@ -201,6 +220,16 @@ class ProcessorBlocksView {
         if (render) this.render()
     }
 
+    clearWarnings(render = false) {
+        this.warnings = []
+        if (render) this.render()
+    }
+
+    clearErrors(render = false) {
+        this.errors = []
+        if (render) this.render()
+    }
+
     render() {
         if (!this.scrollContainer) return
         if (!this.blocksContainer) return
@@ -239,14 +268,17 @@ class ProcessorBlocksView {
         else {
             var rawTextarea = document.createElement("textarea")
             rawTextarea.classList.add("processor-raw")
-            this.blocksContainer.appendChild(rawTextarea)
 
-            for (block of this.blocks) {
-                console.log(block)
-                rawTextarea.value += block.params.join(" ") + "\n"
-            }
+            var blocksStr = this.blocks.map(block => block.toString()).join("\n")
+            rawTextarea.value = blocksStr
 
+            // A workaround for a case when the blocks are rendered inside a container, that is NOT in the DOM (body) yet
+            document.body.appendChild(rawTextarea)
             rawTextarea.style.height = rawTextarea.scrollHeight + "px"
+            document.body.removeChild(rawTextarea)
+
+            rawTextarea.addEventListener("change", () => rawTextarea.value = blocksStr)
+            this.blocksContainer.appendChild(rawTextarea)
         }
         this.warningsContainer.innerHTML = ""
         var firstLineEnd, firstLine, rest
@@ -270,7 +302,7 @@ class ProcessorBlocksView {
             this.errorsContainer.appendChild(errorDiv)
         }
         if (ProcessorBlocksView.DEBUG_LOG) console.groupEnd()
-        this.warnings = []
-        this.errors = []
+        //this.warnings = []
+        //this.errors = []
     }
 }
