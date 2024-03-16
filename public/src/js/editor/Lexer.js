@@ -1,6 +1,7 @@
 var __author__ = "kubik.augustyn@post.cz"
 
 class Lexer {
+    static DEBUG_RANGE = false
     static StringIterator = class StringIterator {
         // String iterator, stores items using run length encoding
         /**
@@ -65,13 +66,31 @@ class Lexer {
                 this.undo(0)
                 return
             }
-            var lastVal = this.#value[this.#value.length - 1]
-            if (typeof lastVal === "string" && lastVal === string) {
-                this.#value[this.#value.length - 1] = [2, string]
+            if (string.length > 1) {
+                string.split("").forEach(char => this.add(char))
+                return;
+            }
+            var lastIndex = this.#value.length - 1
+            var lastVal = this.#value[lastIndex]
+            if (typeof lastVal === "string") {
+                if (lastVal === string) this.#value[lastIndex] = [2, string]
+                else if (lastVal.endsWith(string)) {
+                    this.#value[lastIndex] = lastVal.slice(0, -string.length)
+                    this.#value.push([2, string])
+                } else this.#value[lastIndex] += string
             } else if (lastVal instanceof Array && lastVal[1] === string) {
-                this.#value[this.#value.length - 1][0] += 1
+                this.#value[lastIndex][0] += 1
             } else this.#value.push(string)
             this.undo(0)
+        }
+
+        peek(len) {
+            // if (len === 0) return this.currentChar
+            return this.#itemAtI(this.#i + len - 1)
+        }
+
+        peekDone(len) {
+            return typeof this.peek(len) == "undefined"
         }
 
         toString() {
@@ -85,36 +104,74 @@ class Lexer {
      */
     text
     /**
-     * Text --> Tokens
-     * + = Next token
-     * = = Keep token
-     * * = Skip this char (for non-parsed spaces etc.)
-     * @type {Lexer.StringIterator}
-     */
-    tokenText
-    /**
      * @type {number}
      */
     lineNumber
+    /**
+     * @type {number}
+     */
+    #tokenFrom
+    /**
+     * @type {number}
+     */
+    #tokenTo
+    /**
+     * @type {boolean}
+     */
+    #rangeEnabled
 
     constructor() {
     }
 
-    advance() {
+    advance(skip = false) {
         this.currentChar = this.text.next
+        if (Lexer.DEBUG_RANGE) console.warn(this.currentChar, this.#tokenTo + "++")
+        if (!skip && !this.#rangeEnabled) throw new Error("Cannot advance outside a range")
+        this.#tokenTo++
     }
 
-    nextToken() {
-        this.tokenText.add("+")
+    advanceBy(amount, skip = false) {
+        if (amount <= 0) throw new Error(`Amount ${amount} out of range`)
+        for (var i = 0; i < amount; i++) {
+            this.currentChar = this.text.next
+        }
+        if (Lexer.DEBUG_RANGE) console.warn(this.currentChar, this.#tokenTo + " += " + amount)
+        if (!skip && !this.#rangeEnabled) throw new Error("Cannot advance outside a range")
+        this.#tokenTo += amount
     }
 
-    keepToken() {
-        this.tokenText.add("=")
+    startRange() {
+        if (this.#rangeEnabled) throw new Error("Cannot start a range within a range")
+        if (Lexer.DEBUG_RANGE) console.warn(`NEXT RANGE (${this.#tokenTo} - ?)`)
+        this.#tokenFrom = this.#tokenTo
+        this.#rangeEnabled = true
     }
 
-    skipToken() {
-        // console.warn("Skip token")
-        this.tokenText.add("*")
+    endRange() {
+        if (!this.#rangeEnabled) throw new Error("Cannot end a range without it even starting")
+        if (this.#tokenFrom === this.#tokenTo) throw new Error("Cannot end a range without it covering at least one character")
+        if (Lexer.DEBUG_RANGE) console.warn(`END RANGE (${this.#tokenFrom} - ${this.#tokenTo})`)
+        this.#rangeEnabled = false
+    }
+
+    get tokenFrom() {
+        return this.#tokenFrom
+    }
+
+    get tokenTo() {
+        return this.#tokenTo
+    }
+
+    get rangeEnabled() {
+        return this.#rangeEnabled
+    }
+
+    /**
+     * @return {{from: number, to: number}}
+     */
+    get range() {
+        if (this.#rangeEnabled) throw new Error("Cannot read a range without it being closed")
+        return {from: this.#tokenFrom, to: this.#tokenTo}
     }
 
     newline() {
@@ -123,12 +180,18 @@ class Lexer {
 
     regenerateTokens(text) {
         this.lineNumber = 0
+        this.#tokenFrom = 0
+        this.#tokenTo = 0
+        this.#rangeEnabled = false
         this.text = new Lexer.StringIterator(text)
-        this.tokenText = new Lexer.StringIterator("")
-        this.advance()
+        this.currentChar = this.text.next
         return this.generateTokens()
     }
 
+    /**
+     * @abstract
+     * @return {Generator<Token>}
+     */
     * generateTokens() {
 
     }

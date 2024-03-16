@@ -1,0 +1,8 @@
+8 xor (7 + 3)
+#*AST should be:
+  XOR (OPERATION:XOR)
+       /   \
+      8     ADD (OPERATION:ADD)
+           /   \
+          7     3
+*#

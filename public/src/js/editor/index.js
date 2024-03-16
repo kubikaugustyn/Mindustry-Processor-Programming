@@ -16,13 +16,18 @@ function blocksContainerError(msg) {
         ProcessorBlocksView.DEBUG_LOG = false*/
         msg = msg.stack || msg.name + msg.message
     }
-    console.log(msg)
+    // console.log(msg)
     blocksView.addErrors(false, msg.replaceAll("<", "&lt;").replaceAll("    ", "<tab></tab>").replaceAll("\n", "<br>"))
     blocksView.setBlocks([])
 }
 
+function sanitizeCode(code) {
+    return code.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll("\t", "<tab></tab>").replaceAll(MindustryLexer.TAB, "<tab></tab>")
+}
+
 var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
-    // this.editorElements.code.innerHTML = this.editorElements.input.value.replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")
+    // The use of this.editorElements.input.value was removed
+    // this.editorElements.code.innerHTML = sanitizeCode(code)
     // this.editorElements.code.style.color = "blue"
 
     function onError(msg, token, src) {
@@ -32,35 +37,72 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
             // this.rawSyntax(code, "magenta")
             throw false
         }
-        blocksContainerError(msg)
+        var blocksMsg = msg
+        if (token?.range) {
+            var nlRegex = /\r\n|\r|\n/g
+            var codeTillToken = code.slice(0, token.range.from)
+            var lineNo = codeTillToken.split(nlRegex).length + 1
+            var lastIndex = -1
+            while (nlRegex.test(codeTillToken)) lastIndex = nlRegex.lastIndex
+            var charOnLine = token.range.from - lastIndex
+            blocksMsg += `\nAt line ${lineNo}, character ${charOnLine}`
+        } else if (token?.lineNum) {
+            blocksMsg += `\nAt line ${token.lineNum + 1}`
+        }
+        blocksContainerError(blocksMsg)
         console.warn("Error:", msg, "at token", token)
-        var lines = this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\t", "<tab></tab>").split("\n")
-        if (typeof token?.lineNum === "undefined" || token?.lineNum >= lines.length) throw true
-        // console.log("ERROR", msg, token.lineNum, token, this)
+
         this.editorElements.code.style.color = "red"
-        this.editorElements.code.innerHTML = `<pre style="margin: 0">${lines.slice(0, token.lineNum).map(a => a || " ").join("<br>")}</pre>`
-        this.editorElements.code.innerHTML += `<pre style="margin: 0; color: blue">${lines[token.lineNum]}</pre>`
-        this.editorElements.code.innerHTML += `<pre style="margin: 0">${lines.slice(token.lineNum + 1).map(a => a || " ").join("<br>")}</pre>`
+        var errorTokenStyle = "color: blue; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: red"
+        if (typeof token?.range !== "undefined") {
+            // Show the exact error token
+            var safeCode = codePart => sanitizeCode(codePart).replaceAll(/\r\n|\r|\n/g, "<br>")
+            this.editorElements.code.innerHTML = `${safeCode(code.slice(0, token.range.from))}`
+            this.editorElements.code.innerHTML += `<span style="${errorTokenStyle}">${safeCode(code.slice(token.range.from, token.range.to))}</span>`
+            this.editorElements.code.innerHTML += `${safeCode(code.slice(token.range.to))}`
+        } else {
+            // Show the token error line
+            var lines = sanitizeCode(code).split(/\r\n|\r|\n/)
+            if (typeof token?.lineNum === "undefined" || token?.lineNum >= lines.length) throw true
+            // console.log("ERROR", msg, token.lineNum, token, this)
+            this.editorElements.code.innerHTML = `<pre style="margin: 0">${lines.slice(0, token.lineNum).map(a => a || " ").join("<br>")}</pre>`
+            this.editorElements.code.innerHTML += `<pre style="margin: 0; ${errorTokenStyle}">${lines[token.lineNum]}</pre>`
+            this.editorElements.code.innerHTML += `<pre style="margin: 0">${lines.slice(token.lineNum + 1).map(a => a || " ").join("<br>")}</pre>`
+        }
         throw false
     }
 
     function onWarning(msg, token, src) {
-        blocksView.addWarnings(false, msg.replaceAll("<", "&lt;").replaceAll("    ", "<tab></tab>").replaceAll("\n", "<br>"))
+        blocksView.addWarnings(false, sanitizeCode(msg))
     }
 
     try {
-        var tokensGenerator = lexer.regenerateTokens(this.editorElements.input.value)
+        var tokensGenerator = lexer.regenerateTokens(code)
+        /**
+         * @type {Token[]}
+         */
         var tokens = []
-        for (let token of tokensGenerator) tokens.push(token)
+        for (let token of tokensGenerator) {
+            // console.log("Got token:", token)
+            tokens.push(token)
+        }
 
+        // Will load the constants before compiler is implemented
+        if (!MindustryCompiler.DEFAULT_CONSTANTS.length) new MindustryCompiler().createConstants()
+
+        console.log(tokens)
         parser.throwError = onError.bind(this)
         // Parse (generate Abstract Syntax Tree)
+        /**
+         * @type {Parser.AST}
+         */
         var tree = parser.reparse(tokens.filter(token =>
             !(token instanceof MindustryTokens.TAB || token instanceof MindustryTokens.COMMENT)
         ))
+        console.log(tree)
         if (tree) {
             // console.log(tree)
-            compiler.throwError = onError.bind(this)
+            /*compiler.throwError = onError.bind(this)
             compiler.warning = onWarning.bind(this)
             // Compile (Abstract Syntax Tree --> list of ProcessorBlock)
             var processorBlocks = compiler.recompile(tree)
@@ -68,9 +110,13 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
                 //console.log(MindustryCompiler.addedVarsCache, MindustryCompiler.addedFuncsCache)
                 // console.log(processorBlocks)
                 blocksView.setBlocks(processorBlocks)
-            }
+            }*/
+            tree.setFree()
         }
-        // console.log(newTokens)
+        /*console.log(tokens.map(token => {
+            return `${token.type}: ${token.range.from} - ${token.range.to} - '${token.content || ''}' - '${code.slice(token.range.from, token.range.to)}'`
+        }).join("\n"))*/
+        blocksView.render() // TODO Remove when compilation is added
 
         /*console.log(tokens.map(token => {
             if (token.type === "newline") return "\n"
@@ -78,14 +124,74 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
         }).join(", "), tokens)*/
         // console.log(lexer.tokenText.toString())
         lexer.text.reset()
-        lexer.tokenText.reset()
-        var currentSpan = undefined
-        var currentToken = undefined
-        var currentTokenIndex = 0
-        var tokensFiltered = tokens.filter(a => !(a instanceof MindustryTokens.TAB || a instanceof MindustryTokens.NEWLINE))
-        this.editorElements.code.innerHTML = ""
-        var srcText, cmd, property, value, style, skipText = ""
-        while (!lexer.text.almostDone && !lexer.tokenText.almostDone) {
+        // var currentSpan = undefined
+        // var currentToken = undefined
+        // var currentTokenIndex = 0
+        // var tokensFiltered = tokens.filter(a => !(a instanceof MindustryTokens.TAB || a instanceof MindustryTokens.NEWLINE))
+        this.editorElements.code.innerHTML = ""//`<pre style="margin-top: 0"></pre>`
+        this.editorElements.code.style.removeProperty("color")
+        var position = 0
+        var tokenIndex = 0
+        /**
+         * @type {Token|undefined}
+         */
+        var token
+        var loopI = 0
+        while (position < code.length) {
+            var moveBy = 0
+            if (tokenIndex >= tokens.length) token = undefined
+            while (tokenIndex < tokens.length) {
+                token = tokens[tokenIndex]
+                moveBy = token.range.from - position
+
+                if (!tokens[tokenIndex].range) {
+                    tokenIndex++
+                    if (tokenIndex >= tokens.length) {
+                        token = undefined
+                        break
+                    }
+                } else {
+                    tokenIndex++
+                    break
+                }
+            }
+            if (!token) moveBy = code.length - position
+
+            if (moveBy > 0) {
+                var nonTokenSpan = document.createElement("span")
+                nonTokenSpan.innerHTML = sanitizeCode(code.slice(position, position + moveBy)).replaceAll(/\r\n|\r|\n/g, "<br>")
+                this.editorElements.code.appendChild(nonTokenSpan)
+            }
+            position += moveBy
+            if (token) {
+                if (position !== token.range.from) throw new Error("Severe position mismatch error when syntax highlighting")
+                var tokenSpan = document.createElement("span")
+                tokenSpan.innerHTML = sanitizeCode(code.slice(token.range.from, token.range.to)).replaceAll(/\r\n|\r|\n/g, "<br>")
+
+                if (token.style) {
+                    var style = token.style
+                    var i = 2
+                    while (style === "copy") {
+                        style = tokens[tokenIndex - i]?.style
+                        i++
+                    }
+                    if (style) for (var [property, value] of Object.entries(style))
+                        tokenSpan.style.setProperty(property, value)
+                }
+                if (token.subtypeStyle) {
+                    var subtypeStyle = token.subtypeStyle[token.subtype] || token.subtypeStyle["*"]
+                    for (var [subtypeProperty, subtypeValue] of Object.entries(subtypeStyle))
+                        tokenSpan.style.setProperty(subtypeProperty, subtypeValue)
+                }
+
+                this.editorElements.code.appendChild(tokenSpan)
+                position = token.range.to
+            }
+            loopI++
+            if (loopI >= 10_000) throw new Error("Infinite loop detected when syntax highlighting")
+        }
+        // var srcText, cmd, property, value, style, skipText = ""
+        /*while (!lexer.text.almostDone && !lexer.tokenText.almostDone) {
             srcText = lexer.text.next
             cmd = lexer.tokenText.next
             if (skipText) {
@@ -147,7 +253,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
             // console.log(cmd, `'${srcText}'`, currentToken)
             // console.log(`${cmd} '${srcText}'`, currentSpan, currentToken)
             this.editorElements.code.style.removeProperty("color")
-        }
+        }*/
     } catch (e) {
         if (e?.name) {
             if (e?.token) try {
@@ -159,16 +265,18 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
                 console.warn(e)
                 blocksContainerError(e)
                 this.editorElements.code.style.color = "red"
-                this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${this.editorElements.input.value.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
+                this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${sanitizeCode(code)}</pre>`
             }
         }
     }
 }, function (code, color = "blue") {
-    this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${code.replaceAll("<", "&lt;").replaceAll("\n", "<br>").replaceAll("\t", "<tab></tab>")}</pre>`
+    this.editorElements.code.innerHTML = `<pre style="margin-top: 0">${sanitizeCode(code)}</pre>`
     this.editorElements.code.style.color = color
     blocksView.clearWarnings()
     blocksView.clearErrors()
 }, function (cursor, currentPhrase) {
+    return new Map()
+
     // console.warn("Get matches at", cursor.start, currentPhrase)
     var matches = new Map([
         //...Array.from(new ProcessorTypes.BUILDING().properties.entries()).map(a => ["@" + a[0], a[1].toLowerCase().replaceAll("_", " ").replaceAll("|", " OR ")]),
@@ -192,164 +300,20 @@ editor.classList.add("left")
 loadSaver.setHighlighter(highlighter)
 editor.insertBefore(loadSaver.getContainer(), editor.firstChild)
 document.body.appendChild(editor)
-// TODO load from /examples/examples.json
-var codeExamples = [
-    `## First code example, should cover most of MPPL capabilities
-a = rand 9
-c = 0 ## Default value
-@counter = 7
-if (a > 8){
-\ta = 8
-\tb = rand 9
-\tc = a max b
-}
-d = getlink(c)
-e = @maxItems of d
-
-result = read(cell1, 0)
-##draw.clear() = read(cell1, 0) ## Temporary
-write(cell1, 0, result)
-draw.clear(0, 0, 0)
-draw.color(0, 0, 0, 255)
-draw.col(0)
-f = 0xff
-draw.col(0c00ff00ff) ## %RRGGBBAA (hexadecimal)
-draw.stroke(0)
-draw.line(0, 0, 0, 0)
-draw.rect(0, 0, 0, 0)
-draw.lineRect(0, 0, 0, 0)
-draw.poly(0, 0, 0, 0, 0)
-draw.linePoly(0, 0, 0, 0, 0)
-draw.triangle(0, 0, 0, 0, 0, 0)
-draw.image(0, 0, @copper, 32, 0)
-print("Hello world")
-
-drawflush(display1)
-printflush(message1)
-result = getlink(0)
-control.enabled(block1, 0)
-control.shoot(block1, 0, 0, 0)
-control.shootp(block1, 0, 0)
-control.config(block1, 0)
-control.color(block1, 0)
-result = radar(turret1, enemy, any, any, 1, distance)
-result = @copper of block1
-
-result = 0
-result = a + b
-result = lookup.block(0)
-result = lookup.unit(0)
-result = lookup.item(0)
-result = lookup.liquid(0)
-result = packcolor(0, 0, 0, 1)
-
-wait(0.5)
-stop()
-end()
-jump(5, x == false)
-jump(5, x not false)
-jump(5, x < false)
-jump(5, x <= false)
-jump(5, x > false)
-jump(5, x >= false)
-jump(5, x === false)
-jump(5)
-
-ubind(@poly)
-ucontrol.idle()
-ucontrol.stop()
-ucontrol.move(0, 0)
-ucontrol.approach(0, 0, 5)
-ucontrol.boost(0)
-ucontrol.target(0, 0, 0)
-ucontrol.targetp(0, 0)
-ucontrol.itemDrop(0, 0)
-ucontrol.itemTake(0, 0, 0)
-ucontrol.payDrop()
-ucontrol.payTake(0)
-ucontrol.payEnter()
-## dropped = ucontrol.payEnterIfIn(<radius>, <x>, <y>) - Suggested by [UR] TyT|xexebe#1178
-dropped = ucontrol.payEnterIfIn(5, a, b)
-ucontrol.mine(0, 0)
-ucontrol.flag(0)
-ucontrol.build(0, 0, @copper-wall, 0, 0)
-type, building, floor = ucontrol.getBlock(0, 0)
-result = ucontrol.within(0, 0, 0)
-ucontrol.unbind()
-result = uradar(enemy, any, any, distance)
-outX, outY, found = ulocate.ore(@copper)
-outX, outY, found, building = ulocate.building(core, true)
-outX, outY, found, building = ulocate.spawn()
-outX, outY, found, building = ulocate.damaged()`,
-    `a = 8 + 7
-#*AST should be:
-        SET
-      /     \\
-     a      ADD (OPERATION:ADD)
-           /   \\
-          8     7
-*#`,
-    `a = 8 xor (7 + 3)
-#*AST should be:
-        SET
-      /     \\
-     a      XOR (OPERATION:XOR)
-           /   \\
-          8     ADD (OPERATION:ADD)
-               /   \\
-              7     3
-*#`,
-    `8 xor (7 + 3)
-#*AST should be:
-  XOR (OPERATION:XOR)
-       /   \\
-      8     ADD (OPERATION:ADD)
-           /   \\
-          7     3
-*#`,
-    `a = 8 + a(4)`,
-    `if (8 < 1){
-\ta()
-}
-else {
-\tb()
-}`,
-    `i = 0
-while (i < 100){
-\tucontrol.approach(@thisx, (@thisy + 2), 5)
-\ti = i + 1
-}`,
-    `function sqr(a){
-\treturn a * a
-}
-## TODO Don't need to store result in var if func is void
-a = control.config(sorter1, lookup.block(sqr(3)))`,
-    `i = 0
-y = @thisy + 2
-while (i < 100){
-\tucontrol.approach(@thisx, y, 5)
-\tif (ucontrol.within(@thisx, y, 10) == 1){
-\t\tbreak
-\t}
-\ti = i + 1
-}`,
-    `control.enabled(press1, 0)`,
-    `outX, outY, found = ulocate.ore(@copper)`,
-    `a = rand 9\nb = 6 max a\nc = a max b`,
-    `result = read(cell1, 0)\nwrite(cell1, 0, result)`,
-    `a = 9\n## Test\na = read(cell1, 0) ## Reads cell1`,
-    `##Test of multiline\na = 9\n#* Test\nTest1*#\na = read(cell1, 0) #*Reads cell1\netc.*#`,
-    `##Fails, because floor is operator - fixed\noutX, outY, found, building = ulocate.damaged()\ntype, building, floor = ucontrol.getBlock(0, 0)`,
-    `result = a()\nb()`,
-    "a = 8 + 7 * 3 % (@j of @k)",
-    "a = 0caabbccdd",
-    "## Store a and b into c\na = 123 ## 8 bits (0 - 255)\nb = 231 ## 8 bits\nc = a << 8 + b\nwrite(cell1, 0, c)\n\n## Back\nc = read(cell1, 0)\nb = c b-and 0xFF\na = (c >> 8) b-and 0xFF",
-    "if (a not 8 + 6){\n\ta = 8\n}\nelse {\n\ta = rand 100\n}",
-    "target = @titanium\na = 0\nwhile (a < @itemsCount){\n\tcmp = lookup.item(a)\n\tif (cmp == target) {\n\t\tbreak\n\t}\n\ta = a + 1\n}",
-    "cmp = lookup.item(a)\nif (cmp == target) {\n\ta = 7\n}\nelse {\n\ta = rand 92\n}\nb = 72 max a",
-    "ubind.thisFlag(@mono)\n## Is the equivalent of these functions:\nflag = ubind.getThisFlag()\nubind.flag(@mono, flag)\n\n#*\nWhat if you want to ensure that the functions won't loop indefinetly,\nbecause there's no such unit with that flag?\nUse these functions instead (they take up more instructions though)\n*#\nubind.thisFlagLimited(@mono, 10)\n## Is the equivalent of these functions:\nflag = ubind.getThisFlag()\nubind.flagLimited(@mono, flag, 10)"
-]
-highlighter.editorElements.input.value = codeExamples[23]
+// TODO make it load in the UI
+var codeExamples = [];
+(function () {
+    var DEBUG = true;
+    var rootURL = document.location.origin + document.location.pathname
+    fetch(rootURL.substring(0, rootURL.lastIndexOf('/', rootURL.length - 2)) + "/src/js/editor/examples/examples.json").then(a => a.json()).then(examplesJson => {
+        var examples = examplesJson.examples || []
+        if (DEBUG) examplesJson.debug_examples?.forEach(a => examples.push(a))
+        codeExamples = examples;
+    }).catch(e => console.error(e))
+})()
+highlighter.editorElements.input.value = localStorage.getItem("editor_code") || ""
+// Show a sample script
+if (!highlighter.editorElements.input.value) highlighter.editorElements.input.value = `#######################\n## Declare variables ##\n#######################\n## A constant variable of type NUMBER\nconst NUMBER a = a() + 8 + 3 angle-diff 9\n## Multiple mutable variables of type STRING\nSTRING b = "hello world", c = '*multiline*'\n## The color syntax is intuitive\nCOLOR d = 0caabbccdd\n## Wrong colors get highlighted\nCOLOR e = 0cabc\n## Now the pointer hell: this is a pointer to an ITEM\n*ITEM ptr = @titanium ## itemPointer 'called' at compilation\n## Dereference the pointer to an item\nITEM item = &ptr\n## Create a reference to the item once again\n*ITEM backPtr = itemPointer(item)\n## Get the arguments of a block\nNUMBER size = @size of 8\n## A more English approach\nNUMBER items = @items in 8\n\n#########################\n## Other functionality ##\n#########################\n## Declare functions\nfunction ahoj(NUMBER param1, param2; STRING err){\n\tif (param1  < 5) raiseToDefineMethod(err)\n\treturn 69 * param1 + param2\n}\n## Call functions like so:\ninit(arg1, 8, true, arg4)\n\n## Switch statement\nswitch (a) {\n\tcase 0:\n\t\tprint("Got 0")\n\tcase 1:\n\t\tprint("Got 1")\n\tdefault:\n\t\tprint("Got something else")\n}\n\n## This while loop\nNUMBER a = 0\nwhile (a < 8) {\n\tdoSomething()\n\ta = a + 1\n}\n## Is the equivalent of this one\nNUMBER a = 0\ndo {\n\tdoSomething()\n\ta = a + 1\n} while (a < 8)\n## Which can be further simplified to this:\nfor (NUMBER a = 0; a < 8; a = a + 1){\n\tdoSomething()\n}\n## Some iteration manipulation\nNUMBER a = 0\nwhile (true) {\n\tif (a >= 8) b = rea + k\n\telse if (a == 3) continue\n\tdoSomething()\n\ta = a + 1\n}\n\n## As you have seen, flow control is simple\nif (a > 2) a = 2\nelse if (a < 0 - 2) a = 0 - 2\nelse a = rand a`
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")
 blocksViewContainer.style.height = "calc(100vh - 21px)"

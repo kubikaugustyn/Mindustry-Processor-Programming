@@ -1,0 +1,5 @@
+function sqr(a){
+	return a * a
+}
+
+control.config(sorter1, lookup.block(sqr(3)))

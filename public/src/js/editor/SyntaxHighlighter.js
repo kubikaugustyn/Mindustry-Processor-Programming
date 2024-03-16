@@ -80,9 +80,9 @@ class SyntaxHighlighter {
     }
 
     onKeyUp() {
-        if (!this.highlightOnKeyUp) return
-        this.highlightOnKeyUp = undefined
+        if (typeof this.highlightOnKeyUp == "undefined") return
         this.highlightSyntax(this.highlightOnKeyUp)
+        this.highlightOnKeyUp = undefined
     }
 
     setCode(code, shouldConfirm = true) {
@@ -97,10 +97,9 @@ class SyntaxHighlighter {
         if (text[text.length - 1] === "\n") {
             text += " ";
         }
-        // Update code
-        var code = text.replaceAll(new RegExp("&", "g"), "&amp;").replaceAll(new RegExp("<", "g"), "&lt;"); /* Global RegExp */
+        localStorage.setItem("editor_code", text)
         // Show line numbers
-        var linesCountDelta = code.split("\n").length - this.editorElements.lineNumbers.childElementCount // How many to add = 5, how many to remove = -5
+        var linesCountDelta = text.split("\n").length - this.editorElements.lineNumbers.childElementCount // How many to add = 5, how many to remove = -5
         var i
         if (linesCountDelta < 0) {
             for (i = 0; i < (0 - linesCountDelta); i++) this.editorElements.lineNumbers.removeChild(this.editorElements.lineNumbers.lastChild)
@@ -108,8 +107,8 @@ class SyntaxHighlighter {
             for (i = 0; i < linesCountDelta; i++) this.editorElements.lineNumbers.appendChild(document.createElement("span"))
         }
         // Syntax Highlight
-        this.highlightOnKeyUp = code
-        this.rawSyntax(code)
+        this.highlightOnKeyUp = text
+        this.rawSyntax(text)
     }
 
     sync_scroll(element) {

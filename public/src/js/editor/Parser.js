@@ -189,7 +189,7 @@ class Parser {
         }
 
         static getAST() {
-            var ast = Parser.AST_REUSE_BUFFER.find(ast => ast.free)
+            var ast = Parser.AST_REUSE_BUFFER.find(ast => ast.free, null)
             ast?.reset?.()
             if (ast) return ast
             ast = new Parser.AST()
@@ -199,8 +199,18 @@ class Parser {
     }
 
     static ASTNode = class ASTNode {
+        /**
+         * @type {symbol}
+         */
         type
+        /**
+         * @type {number}
+         */
         lineNum
+        /**
+         * @type {Token|undefined}
+         */
+        sourceToken
     }
 
     /**
@@ -238,8 +248,12 @@ class Parser {
     reparse(tokens) {
         this.tokens = new Parser.ArrayIterator(tokens)
         this.quietError = false
+        this.reset()
         this.advance()
         return this.parse()
+    }
+
+    reset() {
     }
 
     parse() {

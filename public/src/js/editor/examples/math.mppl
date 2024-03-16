@@ -1,0 +1,5 @@
+## Random math operations
+a = rand 9
+b = 6 max a
+c = a max b
+d = 8 + 7 * 3 % (@j of @k)

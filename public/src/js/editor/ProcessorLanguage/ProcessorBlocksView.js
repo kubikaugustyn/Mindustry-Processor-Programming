@@ -298,7 +298,7 @@ class ProcessorBlocksView {
             firstLineEnd = error.indexOf("<br>") === -1 ? error.length : error.indexOf("<br>")
             firstLine = error.slice(0, firstLineEnd)
             rest = error.slice(firstLineEnd + 4)
-            errorDiv.innerHTML = `${firstLine}<br><span style="font-size: .5rem">${rest}</span>`
+            errorDiv.innerHTML = `${firstLine}<br><span style="font-size: .75rem">${rest}</span>`
             this.errorsContainer.appendChild(errorDiv)
         }
         if (ProcessorBlocksView.DEBUG_LOG) console.groupEnd()

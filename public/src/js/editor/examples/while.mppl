@@ -1,0 +1,20 @@
+## Regular while
+i = 0
+while (i < 100) {
+	ucontrol.approach(@thisx, (@thisy + 2), 5)
+	i = i + 1 ## Same as i++ or i += 1
+}
+
+## While with break and continue
+i = 0
+y = @thisy + 2
+while (i < 100) {
+	if (ucontrol.within(@thisx, y, 10) == 1) {
+		break
+	}
+	else if (rand 10 == 5) {
+		continue ## Randomly skip one approach call and i++
+	}
+	ucontrol.approach(@thisx, y, 5)
+	i++
+}

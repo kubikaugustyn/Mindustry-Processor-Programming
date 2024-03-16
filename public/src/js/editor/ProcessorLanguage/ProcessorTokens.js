@@ -115,6 +115,7 @@ class ProcessorTokens { // Basically all block available in processor
             [{0: "max"}, "{1} = max {2} {3}"],
             [{0: "min"}, "{1} = min {2} {3}"],
             [{0: "angle"}, "{1} = angle {2} {3}"],
+            [{0: "angleDiff"}, "{1} = angle diff {2} {3}"],
             [{0: "len"}, "{1} = len {2} {3}"],
             [{0: "noise"}, "{1} = noise {2} {3}"],
             [{0: "abs"}, "{1} = abs {2}"],

@@ -1,0 +1,19 @@
+## Enable or disable a block
+control.enabled(press1, 0)
+
+## Locate an ore
+outX, outY, found = ulocate.ore(@copper)
+
+## Read and write a memory cell
+result = read(cell1, 0)
+write(cell1, 0, result)
+
+## Find a damaged building
+outX, outY, found, building = ulocate.damaged()
+
+## Get block
+type, building, floor = ucontrol.getBlock(0, 0)
+
+## A color - 0cRRGGBBAA
+a = 0caabbccdd
+draw.col(a)

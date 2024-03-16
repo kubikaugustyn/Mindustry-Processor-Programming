@@ -1,0 +1,14 @@
+ubind.thisFlag(@mono)
+## Is the equivalent of these functions:
+flag = ubind.getThisFlag()
+ubind.flag(@mono, flag)
+
+#*
+What if you want to ensure that the functions won't loop indefinetly,
+because there's no such unit with that flag?
+Use these functions instead (they take up more instructions though)
+*#
+ubind.thisFlagLimited(@mono, 10)
+## Is the equivalent of these functions:
+flag = ubind.getThisFlag()
+ubind.flagLimited(@mono, flag, 10)

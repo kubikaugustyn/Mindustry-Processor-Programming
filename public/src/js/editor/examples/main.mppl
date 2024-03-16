@@ -1,7 +1,3 @@
-A
-B
-C
-D
 ## First code example, should cover most of MPPL capabilities
 a = rand 9
 c = 0 ## Default value
@@ -76,7 +72,7 @@ ucontrol.itemTake(0, 0, 0)
 ucontrol.payDrop()
 ucontrol.payTake(0)
 ucontrol.payEnter()
-## dropped = ucontrol.payEnterIfIn(<radius>, <x>, <y>) - Suggested by "[UR] TyT|xexebe#1178" / "urtytxexebe"
+## dropped = ucontrol.payEnterIfIn(<radius>, <x>, <y>) - Suggested by [UR] TyT|xexebe#1178
 dropped = ucontrol.payEnterIfIn(5, a, b)
 ucontrol.mine(0, 0)
 ucontrol.flag(0)

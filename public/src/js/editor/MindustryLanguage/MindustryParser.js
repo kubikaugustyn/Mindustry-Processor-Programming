@@ -4,26 +4,122 @@ var __author__ = "kubik.augustyn@post.cz"
 
 class MindustryParser extends Parser {
     static ERROR_INVALID_TOKEN = "INVALID TOKEN"
+    static ERROR_EXPECTED_OPENING_PAREN = "EXPECTED OPENING PARENTHESIS"
     static ERROR_EXPECTED_CLOSING_PAREN = "EXPECTED CLOSING PARENTHESIS"
     static ERROR_EXPECTED_OPENING_CURLY = "EXPECTED OPENING CURLY"
+    static ERROR_EXPECTED_CLOSING_CURLY = "EXPECTED CLOSING CURLY"
+    static ERROR_EXPECTED_TYPE = "Expected type definition"
     static ERROR_UNEXPECTED_OPERATOR = "UNEXPECTED OPERATOR"
-    static ERROR_EXPECTED_OPERATOR = "EXPECTED OPERATOR"
-    static ERROR_INVALID_OPERATOR = "INVALID OPERATOR"
-
-    static SETNode = "SETNode"
-    static OPNode = "OPNode"
-    static PHRASENode = "PHRASENode"
-    static NUMBERNode = "NUMBERNode"
-    static STRINGNode = "STRINGNode"
-    static KEYWORDNode = "KEYWORDNode"
+    static ERROR_EXPECTED_INITIALIZER = "EXPECTED INITIALIZER"
+    static ERROR_INVALID_LHS_IN_ASSIGNMENT = "Invalid left-hand side in assignment"
+    static ERROR_UNEXPECTED_PAREN = "UNEXPECTED PAREN"
+    static ERROR_EXPECTED_IDENTIFIER = "Expected identifier"
+    static ERROR_UNEXPECTED_TOKEN = "UNEXPECTED TOKEN"
+    static ERROR_UNEXPECTED_EOF = "UNEXPECTED END OF FILE"
+    static ERROR_UNEXPECTED_NEWLINE = "UNEXPECTED NEWLINE (probably my fault)"
+    static ERROR_INVALID_VARIABLE_TYPE = "Invalid variable type"
+    static ERROR_EXPECTED_VARIABLE_DECLARATION = "Expected variable declaration"
+    static ERROR_EXPECTED_NON_CONST_VARIABLE_DECLARATION = "Expected non-constant variable declaration"
+    static ERROR_EXPECTED_COMMA = "Expected a comma separator"
+    static ERROR_EXPECTED_SEMICOLON = "Expected a semicolon separator"
+    static ERROR_UNEXPECTED_KEYWORD = "Unexpected keyword (not implemented)"
+    static ERROR_INVALID_IDENTIFIER = "Invalid identifier - cannot use a type or a keyword as an identifier"
+    static ERROR_INVALID_IDENTIFIER_KIND = "Invalid identifier - cannot use a property, constant or a link as an identifier"
+    static ERROR_EXPECTED_SET = "Expected set (the = operator)"
+    static ERROR_ILLEGAL_BREAK = "Illegal break statement outside a loop or a switch statement"
+    static ERROR_ILLEGAL_CONTINUE = "Illegal continue statement outside a loop"
+    static ERROR_ILLEGAL_RETURN = "Illegal return statement outside a function"
+    static ERROR_MULTIPLE_DEFAULTS_IN_SWITCH = "Multiple default cases in a switch statement"
+    static ERROR_INTERNAL_ERROR = "Internal error, see the console for more information"
 
     static KEYWORDS = {
-        flow: ["if", "while"],
-        else: "else",
-        func: ["function", "subroutine"],
-        return: "return",
-        breakCont: ["break", "continue"],
-        aaaa: ["in"]
+        FOR: "for",
+        BREAK: "break",
+        CONTINUE: "continue",
+        WHILE: "while",
+        DO: "do",
+        IF: "if",
+        ELSE: "else",
+        SWITCH: "switch",
+        CASE: "case",
+        DEFAULT: "default",
+        FUNCTION: "function",
+        CONST: "const",
+        RETURN: "return"
+    }
+    /**
+     * @type {string[]}
+     */
+    static KEYWORDS_LIST
+    static POINTER_OP = MindustryLexer.OPERATORS.find(op => op.chars === "*")
+    static DEREF_OP = MindustryLexer.OPERATORS.find(op => op.chars === "&")
+    static EXPONENT_OP = MindustryLexer.OPERATORS.find(op => op.chars === "**")
+
+    static Context = class Context {
+        /**
+         * Whether we're currently in an assignment
+         * @type {boolean}
+         */
+        isAssignmentTarget
+        /**
+         * Whether we're currently in a function
+         * @type {boolean}
+         */
+        inFunctionBody
+        /**
+         * Whether we're currently in a loop
+         * @type {boolean}
+         */
+        inIteration
+        /**
+         * Whether we're currently in a switch statement
+         * @type {boolean}
+         */
+        inSwitch
+    }
+    static Params = class Params {
+        /**
+         * Whether we're currently in a for loop header (force value setter)
+         * @type {boolean}
+         */
+        inFor
+        /**
+         * Whether we're currently in a const declaration
+         * @type {boolean}
+         */
+        isConst
+        /**
+         * @type {Token|undefined}
+         */
+        variableType
+        /**
+         * @type {boolean}
+         */
+        isPointer
+
+        /**
+         * @param inFor {boolean}
+         * @param isConst {boolean}
+         */
+        constructor(inFor, isConst) {
+            this.inFor = inFor
+            this.isConst = isConst
+            this.variableType = undefined
+            this.isPointer = false
+        }
+    }
+
+    /**
+     * @type {MindustryParser.Context}
+     */
+    ctx
+    /**
+     * @type {Parser.AST}
+     */
+    ast
+
+    reset() {
+        this.ctx = new MindustryParser.Context
     }
 
     parse() {
@@ -31,498 +127,1026 @@ class MindustryParser extends Parser {
             return undefined
         }
 
-        var result = Parser.AST.getAST()
-        result.use()
+        var ast = Parser.AST.getAST()
+        this.ast = ast
+        ast.use()
+        console.log(ast)
         // console.log(this.tokens.toArray())
-        var numOpenParens = new Parser.AtomicInteger(0)
         var i = 0, limit = 10_000
-        this.removeNewline()
+        this.removeNewlineAndComments()
         while (!this.tokens.done) {
-            result.parentNodes.push(this.parseStatement(result, numOpenParens, true))
-            this.removeNewline()
+            ast.parentNodes.push(this.addNode(this.parseStatementListItem()))
+
+            this.removeNewlineAndComments()
             i++
             if (i >= limit) break
         }
         if (i >= limit) console.log("Reached limit")
 
-        if (!result) this.handleError()
+        // ??? if (!ast) this.handleError()
+        return ast
+    }
+
+    // Block is a statement list which consists of statement list items
+    parseStatementListItem() {
+        /**
+         * @type {Parser.ASTNode}
+         */
+        var statement
+        this.ctx.isAssignmentTarget = true
+        if (this.currentToken instanceof MindustryTokens.PHRASE) {
+            // Declaration
+            var value = this.currentToken.content
+            if (value === MindustryParser.KEYWORDS.CONST) {
+                statement = this.parseLexicalDeclaration(new MindustryParser.Params(false, true))
+            } else if (value === MindustryParser.KEYWORDS.FUNCTION) {
+                statement = this.parseFunctionDeclaration()
+            } else if (ProcessorTypes.ALL_TYPES.includes(value)) {
+                statement = this.isLexicalDeclaration() ?
+                    this.parseLexicalDeclaration(new MindustryParser.Params(false, false)) :
+                    this.parseStatement()
+            }
+        } else if (this.currentToken instanceof MindustryTokens.OPERATOR) {
+            // Pointer to a type
+            /**
+             * @type {MindustryLexer.OPERATOR}
+             */
+            var op = this.currentToken.subtypeObject
+            if (op === MindustryParser.POINTER_OP) {
+                if (this.tokens.nextPreview instanceof MindustryTokens.PHRASE) {
+                    statement = this.parseLexicalDeclaration(new MindustryParser.Params(false, false))
+                }
+            }
+        }
+        if (!statement) statement = this.parseStatement()
+        return statement
+    }
+
+    parseStatement() {
+        // console.log("Parse statement at token:", this.currentToken)
+        var statement
+        if (this.currentToken instanceof MindustryTokens.VALUE) statement = this.parseExpressionStatement()
+        else if (this.currentToken instanceof MindustryTokens.PAREN) {
+            if (this.currentToken.content === "{") statement = this.parseBlock()
+            else statement = this.parseExpressionStatement()
+        } else if (this.currentToken instanceof MindustryTokens.PHRASE) {
+            if (!MindustryParser.KEYWORDS_LIST.includes(this.currentToken.content)) {
+                if (ProcessorTypes.ALL_TYPES.includes(this.currentToken.content) && this.isLexicalDeclaration()) {
+                    statement = this.parseLexicalDeclaration(new MindustryParser.Params(false, false))
+                } else {
+                    if (this.matchParen("(", this.tokens.nextPreview)) {
+                        var calleeToken = this.currentToken
+                        var callee = this.parseIdentifierName()
+                        statement = this.parseCallExpression(calleeToken, callee, new MindustryParser.Params(false, false))
+                    } else
+                        statement = this.parseForcedAssignmentExpression(new MindustryParser.Params(false, false))
+                }
+            } else switch (this.currentToken.content) {
+                case MindustryParser.KEYWORDS.BREAK:
+                    statement = this.parseBreakStatement()
+                    break
+                case MindustryParser.KEYWORDS.CONTINUE:
+                    statement = this.parseContinueStatement()
+                    break
+                case MindustryParser.KEYWORDS.DO:
+                    statement = this.parseDoWhileStatement()
+                    break
+                case MindustryParser.KEYWORDS.FOR:
+                    statement = this.parseForStatement()
+                    break
+                case MindustryParser.KEYWORDS.FUNCTION:
+                    statement = this.parseFunctionDeclaration()
+                    break
+                case MindustryParser.KEYWORDS.IF:
+                    statement = this.parseIfStatement()
+                    break
+                case MindustryParser.KEYWORDS.RETURN:
+                    statement = this.parseReturnStatement()
+                    break
+                case MindustryParser.KEYWORDS.SWITCH:
+                    statement = this.parseSwitchStatement()
+                    break
+                case MindustryParser.KEYWORDS.CONST:
+                    statement = this.parseLexicalDeclaration(new MindustryParser.Params(false, true))
+                    break
+                case MindustryParser.KEYWORDS.WHILE:
+                    statement = this.parseWhileStatement()
+                    break
+                default:
+                    this.handleError(MindustryParser.ERROR_UNEXPECTED_KEYWORD,this.currentToken)
+                    // statement = this.parseExpressionStatement()
+            }
+        } else
+            this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+
+        if (!statement) this.handleError(MindustryParser.ERROR_INTERNAL_ERROR, this.currentToken)
+
+        return statement
+    }
+
+    parseForcedVariableDeclaration(allowConst) {
+        var startToken = this.currentToken
+        var declaration
+        if (!(this.currentToken instanceof MindustryTokens.PHRASE)) this.handleError(MindustryParser.ERROR_EXPECTED_VARIABLE_DECLARATION, this.currentToken)
+        if (!MindustryParser.KEYWORDS_LIST.includes(this.currentToken.content)) {
+            if (ProcessorTypes.ALL_TYPES.includes(this.currentToken.content) && this.isLexicalDeclaration()) {
+                declaration = this.parseLexicalDeclaration(new MindustryParser.Params(false, false))
+            }
+        } else if (this.currentToken.content === MindustryParser.KEYWORDS.CONST) {
+            if (!allowConst) this.handleError(MindustryParser.ERROR_EXPECTED_NON_CONST_VARIABLE_DECLARATION, this.currentToken)
+            declaration = this.parseLexicalDeclaration(new MindustryParser.Params(false, true))
+        }
+        if (!declaration) this.handleError(MindustryParser.ERROR_EXPECTED_VARIABLE_DECLARATION, startToken)
+        return declaration
+    }
+
+    /**
+     * @return {MindustryNodes.BreakStatement}
+     */
+    parseBreakStatement() {
+        var breakToken = this.currentToken
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.BREAK)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, breakToken)
+        if (!this.ctx.inSwitch && !this.ctx.inIteration) this.handleError(MindustryParser.ERROR_ILLEGAL_BREAK, breakToken)
+        this.markAsKeyword(breakToken)
+        this.advance()
+
+        return this.finalize(new MindustryNodes.BreakStatement, breakToken)
+    }
+
+    /**
+     * @return {MindustryNodes.ContinueStatement}
+     */
+    parseContinueStatement() {
+        var continueToken = this.currentToken
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.CONTINUE)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, continueToken)
+        if (!this.ctx.inIteration) this.handleError(MindustryParser.ERROR_ILLEGAL_CONTINUE, continueToken)
+        this.markAsKeyword(continueToken)
+        this.advance()
+
+        return this.finalize(new MindustryNodes.ContinueStatement, continueToken)
+    }
+
+    /**
+     * @return {MindustryNodes.ForStatement}
+     */
+    parseForStatement() {
+        var startToken = this.currentToken
+        var init, test, update
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.FOR)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        if (!this.matchParen("(")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+        this.advance()
+
+        if (this.currentToken instanceof MindustryTokens.SEMICOLON) this.advance()
+        else {
+            init = this.addNode(this.parseForcedVariableDeclaration(false))
+            this.expectSemicolonSeparator()
+        }
+
+        if (this.currentToken instanceof MindustryTokens.SEMICOLON) this.advance()
+        else {
+            test = this.addNode(this.parseExpression())
+            this.expectSemicolonSeparator()
+        }
+
+        if (!this.matchParen(")")) {
+            update = this.addNode(this.parseExpression())
+        }
+
+        if (!this.matchParen(")")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+        this.advance()
+
+        var previousInIteration = this.ctx.inIteration
+        this.ctx.inIteration = true
+        var body = this.addNode(this.parseStatement())
+        this.ctx.inIteration = previousInIteration
+
+        return this.finalize(new MindustryNodes.ForStatement(init, test, update, body), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.FunctionDeclaration}
+     */
+    parseFunctionDeclaration() {
+        // <function func(NUMBER a, b; STRING c) {...}>
+        var startToken = this.currentToken
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.FUNCTION)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        this.currentToken.subtype = "function-declaration"
+        var identifier = this.addNode(this.parseIdentifierName())
+        var params = this.addNodes(this.parseFormalParameters())
+        var body = this.addNode(this.parseFunctionSourceElements())
+
+        return this.finalize(new MindustryNodes.FunctionDeclaration(identifier, params, body), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.Parameter[]}
+     */
+    parseFormalParameters() {
+        // function func<(NUMBER a, b; STRING c)> {...}
+        var params = []
+        if (!this.matchParen("(")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+        this.advance()
+
+        if (!this.matchParen(")")) {
+            while (this.currentToken) {
+                if (!(this.currentToken instanceof MindustryTokens.PHRASE) ||
+                    !ProcessorTypes.ALL_TYPES.includes(this.currentToken.content) ||
+                    MindustryParser.KEYWORDS_LIST.includes(this.currentToken.content))
+                    this.handleError(MindustryParser.ERROR_EXPECTED_TYPE, this.currentToken)
+                var type = this.currentToken
+                type.subtype = "variable-type"
+                this.checkVariableType(type) // Just to make sure
+                this.advance()
+
+                while (this.currentToken) {
+                    var identifier = this.currentToken
+                    if (!(identifier instanceof MindustryTokens.PHRASE))
+                        this.handleError(MindustryParser.ERROR_EXPECTED_IDENTIFIER, identifier)
+                    if (ProcessorTypes.ALL_TYPES.includes(identifier.content) ||
+                        MindustryParser.KEYWORDS_LIST.includes(identifier.content))
+                        this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
+                    if (identifier.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, identifier)
+                    identifier.subtype = "function-param"
+                    params.push(this.finalize(new MindustryNodes.Identifier(identifier.content), identifier))
+                    this.advance()
+
+                    if (this.matchParen(")") || this.currentToken instanceof MindustryTokens.SEMICOLON) break
+
+                    this.expectCommaSeparator()
+                }
+
+                if (this.matchParen(")")) break
+
+                this.expectSemicolonSeparator()
+            }
+        }
+
+        if (!this.matchParen(")")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+        this.advance()
+        return params
+    }
+
+    /**
+     * @return {MindustryNodes.BlockStatement}
+     */
+    parseFunctionSourceElements() {
+        // function func(NUMBER a, b; STRING c) <{...}>
+
+        var previousInFunctionBody = this.ctx.inFunctionBody
+        this.ctx.inFunctionBody = true
+        var body = this.parseBlock()
+        this.ctx.inFunctionBody = previousInFunctionBody
+
+        return body
+    }
+
+    /**
+     * @return {MindustryNodes.IfStatement}
+     */
+    parseIfStatement() {
+        var alternate, startToken = this.currentToken
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.IF)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        if (!this.matchParen("(")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+        this.advance()
+
+        var test = this.addNode(this.parseExpression())
+
+        if (!this.matchParen(")")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+        this.advance()
+
+        var consequent = this.addNode(this.parseIfClause())
+        this.removeNewlineAndComments()
+        if (this.matchKeyword(MindustryParser.KEYWORDS.ELSE)) {
+            this.markAsKeyword()
+            this.advance()
+            alternate = this.addNode(this.parseIfClause())
+        }
+
+        return this.finalize(new MindustryNodes.IfStatement(test, consequent, alternate), startToken)
+    }
+
+    /**
+     * @return {Parser.ASTNode}
+     */
+    parseIfClause() {
+        return this.parseStatement()
+    }
+
+    /**
+     * @return {MindustryNodes.ReturnStatement}
+     */
+    parseReturnStatement() {
+        var startToken = this.currentToken
+        if (!this.ctx.inFunctionBody) this.handleError(MindustryParser.ERROR_ILLEGAL_RETURN, this.currentToken)
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.RETURN)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        var hasArgument = !!this.currentToken && (
+            !this.matchParen("}") ||
+            this.currentToken instanceof MindustryTokens.VALUE
+        )
+        var argument = hasArgument ? this.addNode(this.parseExpression()) : undefined
+
+        return this.finalize(new MindustryNodes.ReturnStatement(argument), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.SwitchStatement}
+     */
+    parseSwitchStatement() {
+        var startToken = this.currentToken
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.SWITCH)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        if (!this.matchParen("(")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+        this.advance()
+
+        var discriminant = this.addNode(this.parseExpression())
+
+        if (!this.matchParen(")")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+        this.advance()
+
+        var previousInSwitch = this.ctx.inSwitch
+        this.ctx.inSwitch = true
+
+        var cases = []
+        var default_case, hasDefault = false
+        if (!this.matchParen("{")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_CURLY, this.currentToken)
+        this.advance()
+        while (true) {
+            this.removeNewlineAndComments()
+            if (this.matchParen("}")) break
+            var clauseToken = this.currentToken
+            var clause = this.parseSwitchCase()
+            if (clause instanceof MindustryNodes.CaseStatement) cases.push(this.addNode(clause))
+            else {
+                if (hasDefault) this.handleError(MindustryParser.ERROR_MULTIPLE_DEFAULTS_IN_SWITCH, clauseToken)
+                default_case = this.addNode(clause)
+                hasDefault = true
+            }
+        }
+        if (!this.matchParen("}")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_CURLY, this.currentToken)
+        this.advance()
+
+        this.ctx.inSwitch = previousInSwitch
+
+        return this.finalize(new MindustryNodes.SwitchStatement(discriminant, cases, default_case), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.CaseStatement|MindustryNodes.DefaultStatement}
+     */
+    parseSwitchCase() {
+        var startToken = this.currentToken
+
+        var test, isDefault
+        if (this.matchKeyword(MindustryParser.KEYWORDS.DEFAULT)) {
+            isDefault = true
+            this.markAsKeyword()
+            this.advance()
+        } else if (this.matchKeyword(MindustryParser.KEYWORDS.CASE)) {
+            isDefault = false
+            this.markAsKeyword()
+            this.advance()
+            test = this.addNode(this.parseExpression())
+        } else this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+
+        if (!(this.currentToken instanceof MindustryTokens.COLON)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.advance()
+
+        var consequent = []
+        while (true) {
+            this.removeNewlineAndComments()
+            if (this.matchParen("}") ||
+                this.matchKeyword(MindustryParser.KEYWORDS.DEFAULT) ||
+                this.matchKeyword(MindustryParser.KEYWORDS.CASE)) break
+            consequent.push(this.addNode(this.parseStatementListItem()))
+        }
+
+        return isDefault ?
+            this.finalize(new MindustryNodes.DefaultStatement(consequent), startToken) :
+            this.finalize(new MindustryNodes.CaseStatement(test, consequent), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.WhileStatement}
+     */
+    parseWhileStatement() {
+        var startToken = this.currentToken
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.WHILE)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        if (!this.matchParen("(")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+        this.advance()
+
+        var test = this.addNode(this.parseExpression())
+
+        if (!this.matchParen(")")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+        this.advance()
+
+        var previousInIteration = this.ctx.inIteration
+        this.ctx.inIteration = true
+        var body = this.addNode(this.parseStatement())
+        this.ctx.inIteration = previousInIteration
+
+        return this.finalize(new MindustryNodes.WhileStatement(test, body), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.WhileStatement}
+     */
+    parseDoWhileStatement() {
+        var startToken = this.currentToken
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.DO)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        this.removeNewlineAndComments()
+        var previousInIteration = this.ctx.inIteration
+        this.ctx.inIteration = true
+        var body = this.addNode(this.parseStatement())
+        this.ctx.inIteration = previousInIteration
+        this.removeNewlineAndComments()
+
+        if (!this.matchKeyword(MindustryParser.KEYWORDS.WHILE)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+        this.markAsKeyword()
+        this.advance()
+
+        if (!this.matchParen("(")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+        this.advance()
+
+        var test = this.addNode(this.parseExpression())
+
+        if (!this.matchParen(")")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+        this.advance()
+
+        return this.finalize(new MindustryNodes.WhileStatement(test, body), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.ExpressionStatement}
+     */
+    parseExpressionStatement() {
+        var startToken = this.currentToken
+        var expr = this.addNode(this.parseExpression())
+        return this.finalize(new MindustryNodes.ExpressionStatement(expr), startToken)
+    }
+
+    /**
+     * @return {MindustryNodes.BlockStatement}
+     */
+    parseBlock() {
+        var startToken = this.currentToken
+
+        if (!this.matchParen("{")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_CURLY, this.currentToken)
+        this.advance()
+        var block = []
+        while (this.currentToken) {
+            this.removeNewlineAndComments()
+            if (this.matchParen("}")) break
+            block.push(this.addNode(this.parseStatementListItem()))
+        }
+        if (!this.matchParen("}")) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_CURLY, this.currentToken)
+        this.advance()
+
+        if (block.length === 0) return this.finalize(new MindustryNodes.EmptyStatement, startToken)
+        else if (block.length === 1) return this.ast.nodePool[block[0]]
+        else return this.finalize(new MindustryNodes.BlockStatement(block), startToken)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {MindustryNodes.VariableDeclaration}
+     */
+    parseLexicalDeclaration(params) {
+        // <NUMBER A = 9, b = 5, c = 6>
+        var type = this.currentToken
+        if (params.isConst) {
+            this.currentToken.subtype = "constant"
+            this.advance()
+            type = this.currentToken
+        }
+        var isPointer = this.currentToken instanceof MindustryTokens.OPERATOR
+        if (isPointer) {
+            if (this.currentToken.subtypeObject !== MindustryParser.POINTER_OP) this.handleError(MindustryParser.ERROR_UNEXPECTED_OPERATOR, this.currentToken)
+            this.advance()
+            type = this.currentToken
+        }
+        this.advance()
+
+        type.subtype = "variable-type"
+        this.checkVariableType(type) // Just to make sure
+
+        params.variableType = type
+        params.isPointer = isPointer
+        var declarators = this.parseBindingList(params)
+        var declaration = new MindustryNodes.VariableDeclaration
+        declaration.declarators = this.addNodes(declarators)
+        return this.finalize(declaration, type)
+    }
+
+    /**
+     * @param type {Token}
+     */
+    checkVariableType(type) {
+        if (ProcessorTypes.ALL_TYPES.includes(type.content)) return
+        this.handleError(MindustryParser.ERROR_INVALID_VARIABLE_TYPE, type)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {MindustryNodes.VariableDeclarator[]}
+     */
+    parseBindingList(params) {
+        // NUMBER <A = 9, b = 5, c = 6>
+        /**
+         * @type {MindustryNodes.VariableDeclarator[]}
+         */
+        var list = [this.parseLexicalBinding(params)]
+        while (this.currentToken instanceof MindustryTokens.COMMA) {
+            this.advance()
+            list.push(this.parseLexicalBinding(params))
+        }
+        return list
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {MindustryNodes.VariableDeclarator}
+     */
+    parseLexicalBinding(params) {
+        // NUMBER <A = 9>, b = 5, c = 6
+        var declarator = new MindustryNodes.VariableDeclarator
+
+        var name = this.currentToken
+        if (name.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, name)
+        if (MindustryParser.KEYWORDS_LIST.includes(name.content) || ProcessorTypes.ALL_TYPES.includes(name.content))
+            this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER, name)
+        this.advance()
+
+        if (!this.matchSet()) this.handleError(MindustryParser.ERROR_EXPECTED_INITIALIZER, this.currentToken)
+        this.advance()
+        var init = this.addNode(this.isolateCoverGrammar(this.parseAssignmentExpression, params))
+        var identifier = this.addNode(this.finalize(new MindustryNodes.Identifier(name.content), name))
+
+        declarator.initializer = init
+        declarator.variableName = identifier
+        declarator.isConst = params.isConst
+        declarator.valueType = params.variableType.content
+
+        return this.finalize(declarator, name)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parseAssignmentExpression(params) {
+        var startToken = this.currentToken
+        var expr = this.parseConditionalExpression(params)
+
+        if (this.matchSet()) {
+            if (!this.ctx.isAssignmentTarget) this.handleError(MindustryParser.ERROR_INVALID_LHS_IN_ASSIGNMENT, this.currentToken)
+
+            this.advance()
+            // Originally parseAssignmentExpression - allowed a = b = 9 syntax
+            // https://github.com/kubikaugustyn/KUtil/blob/09ca67a0f7a7f669b5ae8f9e19b0006369f84e83/kutil/language/languages/javascript/JSParser.py#L1639-L1640
+            var right = this.addNode(this.finalize(this.isolateCoverGrammar(this.parseConditionalExpression, params)))
+            expr = this.finalize(new MindustryNodes.AssignmentExpression(this.addNode(expr), right), startToken)
+        }
+
+        return expr
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {MindustryNodes.AssignmentExpression}
+     */
+    parseForcedAssignmentExpression(params) {
+        var startToken = this.currentToken
+        var target = this.addNode(this.parseIdentifierName())
+        if (!this.matchSet()) this.handleError(MindustryParser.ERROR_EXPECTED_SET, this.currentToken)
+        this.advance()
+        var value = this.addNode(this.finalize(this.isolateCoverGrammar(this.parseConditionalExpression, params)))
+        return this.finalize(new MindustryNodes.AssignmentExpression(target, value), startToken)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parseConditionalExpression(params) {
+        // A place to add the ternary operator, see:
+        // https://github.com/kubikaugustyn/KUtil/blob/09ca67a0f7a7f669b5ae8f9e19b0006369f84e83/kutil/language/languages/javascript/JSParser.py#L1448-L1462
+        return this.inheritCoverGrammar(this.parseBinaryExpression, params)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parseBinaryExpression(params) {
+        var startToken = this.currentToken
+
+        var expr = this.inheritCoverGrammar(this.parseExponentiationExpression, params)
+
+        var token = this.currentToken
+        var precedence = this.binaryPrecedence(token)
+        if (precedence > 0) {
+            this.advance()
+
+            this.ctx.isAssignmentTarget = false
+
+            var left = expr
+            var right = this.isolateCoverGrammar(this.parseExponentiationExpression, params)
+
+            var stack = [left, token.subtypeObject, right]
+            var precedences = [precedence]
+            while (true) {
+                precedence = this.binaryPrecedence(this.currentToken)
+                if (precedence <= 0) break
+
+                // Reduce: make a binary expression from the three topmost entries.
+                while (stack.length > 2 && precedence <= precedences[precedences.length - 1]) {
+                    right = this.addNode(stack.pop())
+                    var operator = stack.pop()
+                    precedences.pop()
+                    left = this.addNode(stack.pop())
+                    stack.push(this.finalize(new MindustryNodes.BinaryExpression(operator, left, right), startToken))
+                }
+
+                // Shift.
+                stack.push(this.currentToken.subtypeObject)
+                this.advance()
+                precedences.push(precedence)
+                stack.push(this.isolateCoverGrammar(this.parseExponentiationExpression, params))
+            }
+
+            // Final reduce to clean up the stack
+            var i = stack.length - 1
+            expr = stack[i]
+
+            while (i > 1) {
+                operator = stack[i - 1]
+                expr = this.finalize(new MindustryNodes.BinaryExpression(operator, this.addNode(stack[i - 2]), this.addNode(expr)), startToken)
+                i -= 2
+            }
+        }
+
+        return expr
+    }
+
+    /**
+     * @param token {Token}
+     * @return {number}
+     */
+    binaryPrecedence(token) {
+        return token instanceof MindustryTokens.OPERATOR ? token.subtypeObject.precedence : 0
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parseExponentiationExpression(params) {
+        var startToken = this.currentToken
+
+        var expr = this.inheritCoverGrammar(this.parseUnaryExpression, params)
+        if (!(expr instanceof MindustryNodes.UnaryExpression) && this.currentToken?.subtypeObject === MindustryParser.EXPONENT_OP) {
+            this.advance()
+            this.ctx.isAssignmentTarget = false
+            var left = this.addNode(expr)
+            var right = this.addNode(this.isolateCoverGrammar(this.parseExponentiationExpression, params))
+            expr = this.finalize(new MindustryNodes.BinaryExpression(MindustryParser.EXPONENT_OP, left, right), startToken)
+        }
+
+        return expr
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parseUnaryExpression(params) {
+        var isDeref = this.currentToken.subtypeObject === MindustryParser.DEREF_OP
+        if (this.currentToken instanceof MindustryTokens.OPERATOR &&
+            (!this.currentToken.subtypeObject.has2inputs || isDeref)
+        ) {
+            var token = this.currentToken
+            this.advance()
+            var expr = this.inheritCoverGrammar(this.parseUnaryExpression, params)
+            if (isDeref) expr = new MindustryNodes.DerefExpression(this.addNode(expr))
+            else expr = new MindustryNodes.UnaryExpression(token.subtypeObject, this.addNode(expr))
+            expr = this.finalize(expr, token)
+            this.ctx.isAssignmentTarget = false
+            return expr
+        } else return this.parseUpdateExpression(params)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parseUpdateExpression(params) {
+        // Place to add ++x, --x, x++, x--
+        // https://github.com/kubikaugustyn/KUtil/blob/09ca67a0f7a7f669b5ae8f9e19b0006369f84e83/kutil/language/languages/javascript/JSParser.py#L1284
+        // this.handleError(MindustryParser.ERROR_UNEXPECTED_OPERATOR, this.currentToken)
+        var startToken = this.currentToken
+        return this.finalize(this.inheritCoverGrammar(this.parseLeftHandSideExpressionAllowCall, params), startToken)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parseLeftHandSideExpressionAllowCall(params) {
+        var startToken = this.currentToken
+
+        var expr = this.inheritCoverGrammar(this.parsePrimaryExpression, params)
+        var prop
+        while (true) {
+            if (this.currentToken instanceof MindustryTokens.DOT) {
+                var holderToken = this.tokens.lastPreview
+                this.ctx.isAssignmentTarget = true
+                this.advance()
+                prop = this.addNode(this.parseIdentifierName())
+                expr = this.finalize(new MindustryNodes.StaticMemberExpression(this.addNode(expr), prop), holderToken)
+            } else if (this.matchParen("(")) {
+                /**
+                 * @type {Token}
+                 */
+                var calleeToken = this.tokens.lastPreview
+                expr = this.parseCallExpression(calleeToken, expr, params)
+            } else if (this.matchParen("[")) {
+                this.ctx.isAssignmentTarget = true
+                this.advance()
+                prop = this.addNode(this.isolateCoverGrammar(this.parseExpression, params))
+                if (!this.matchParen("]"))
+                    this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+                this.advance()
+
+                expr = this.finalize(new MindustryNodes.ComputedMemberExpression(this.addNode(expr), prop), startToken)
+            } else break
+        }
+
+        return expr
+    }
+
+    /**
+     * @param calleeToken {Token}
+     * @param callee {Parser.ASTNode}
+     * @param params {MindustryParser.Params}
+     * @return {MindustryNodes.CallExpression}
+     */
+    parseCallExpression(calleeToken, callee, params) {
+        calleeToken.subtype = "function-call"
+        this.ctx.isAssignmentTarget = false
+        var args = this.parseArguments(params)
+        return this.finalize(new MindustryNodes.CallExpression(this.addNode(callee), this.addNodes(args)), calleeToken)
+    }
+
+    /**
+     * @return {MindustryNodes.Identifier}
+     */
+    parseIdentifierName() {
+        var identifier = this.currentToken
+        this.advance()
+        var name = identifier.content
+        if (!(identifier instanceof MindustryTokens.PHRASE))
+            this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, identifier)
+        if (MindustryParser.KEYWORDS_LIST.includes(name) || ProcessorTypes.ALL_TYPES.includes(name))
+            this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
+        return this.finalize(new MindustryNodes.Identifier(name), identifier)
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    parsePrimaryExpression(params) {
+        if (this.currentToken instanceof MindustryTokens.PHRASE) {
+            var name = this.currentToken.content
+            var nameToken = this.currentToken
+            this.advance()
+            if (name === MindustryParser.KEYWORDS.FUNCTION) {
+                this.ctx.isAssignmentTarget = false
+                return this.finalize(new MindustryNodes.Identifier(this.currentToken.content), this.currentToken)
+            } else {
+                return this.finalize(new MindustryNodes.Identifier(name), nameToken)
+            }
+        } else if (this.currentToken instanceof MindustryTokens.VALUE) {
+            this.ctx.isAssignmentTarget = false
+            var token = this.currentToken
+            this.advance()
+            return this.finalize(new MindustryNodes.Value(token.content), token)
+        } else if (this.currentToken instanceof MindustryTokens.PAREN) {
+            this.handleError(MindustryParser.ERROR_UNEXPECTED_PAREN, this.currentToken)
+        } else this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
+    }
+
+    /**
+     * @return {Parser.ASTNode}
+     */
+    parseExpression() {
+        // A place to add sequence expression
+        // https://github.com/kubikaugustyn/KUtil/blob/09ca67a0f7a7f669b5ae8f9e19b0006369f84e83/kutil/language/languages/javascript/JSParser.py#L1654-L1663
+        return this.isolateCoverGrammar(this.parseAssignmentExpression, new MindustryParser.Params(false, false))
+    }
+
+    /**
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode[]}
+     */
+    parseArguments(params) {
+        if (!this.matchParen("("))
+            this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+        this.advance()
+        var args = []
+        if (!this.matchParen(")")) {
+            while (true) {
+                args.push(this.isolateCoverGrammar(this.parseAssignmentExpression, params))
+                if (this.matchParen(")")) break
+                this.expectCommaSeparator()
+                if (this.matchParen(")")) break
+            }
+        }
+
+        if (!this.matchParen(")"))
+            this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+        this.advance()
+        return args
+    }
+
+    /**
+     * @param paren {string}
+     * @param token {Token|undefined}
+     * @return {boolean}
+     */
+    matchParen(paren, token = undefined) {
+        if (!token) token = this.currentToken
+        return token instanceof MindustryTokens.PAREN && token.content === paren
+    }
+
+    /**
+     * @return {boolean}
+     */
+    matchSet() {
+        return this.currentToken instanceof MindustryTokens.SET
+    }
+
+    /**
+     * @return {boolean}
+     */
+    matchKeyword(keyword) {
+        return this.currentToken instanceof MindustryTokens.PHRASE && this.currentToken.content === keyword
+    }
+
+    expectCommaSeparator() {
+        if (!(this.currentToken instanceof MindustryTokens.COMMA))
+            this.handleError(MindustryParser.ERROR_EXPECTED_COMMA, this.currentToken)
+        this.advance()
+    }
+
+    expectSemicolonSeparator() {
+        if (!(this.currentToken instanceof MindustryTokens.SEMICOLON))
+            this.handleError(MindustryParser.ERROR_EXPECTED_SEMICOLON, this.currentToken)
+        this.advance()
+    }
+
+    /**
+     * @param parseFunction {(params: MindustryParser.Params)=>Parser.ASTNode}
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    isolateCoverGrammar(parseFunction, params) {
+        var previousIsAssignmentTarget = this.ctx.isAssignmentTarget
+        this.ctx.isAssignmentTarget = true
+        var result = parseFunction.bind(this, params)()
+        this.ctx.isAssignmentTarget = previousIsAssignmentTarget
         return result
     }
 
-    parseStatement(ast, numOpenParens, beginningOfLine = false) {
-        // console.log("Parse statement", ast, numOpenParens.get(), this.currentToken)
-        //CHECK IF CONTROL FLOW STATEMENT:
-        if (this.currentToken instanceof MindustryTokens.PHRASE && (MindustryParser.KEYWORDS.flow.includes(this.currentToken.content))) {
-            if (!beginningOfLine) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.currentToken) // Can't have this NOT at the beginning of line
-            this.currentToken.subtype = "keyword"
-            var type = this.currentToken.content
+    /**
+     * @param parseFunction {(params: MindustryParser.Params)=>Parser.ASTNode}
+     * @param params {MindustryParser.Params}
+     * @return {Parser.ASTNode}
+     */
+    inheritCoverGrammar(parseFunction, params) {
+        var previousIsAssignmentTarget = this.ctx.isAssignmentTarget
+        this.ctx.isAssignmentTarget = true
+        var result = parseFunction.bind(this, params)()
+        this.ctx.isAssignmentTarget = previousIsAssignmentTarget && this.ctx.isAssignmentTarget
+        return result
+    }
 
-            if (numOpenParens > 0) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.currentToken)
+    /**
+     * @param node {Parser.ASTNode}
+     * @param token {Token|undefined}
+     * @return {Parser.ASTNode}
+     */
+    finalize(node, token) {
+        node.lineNum = token?.lineNum
+        node.sourceToken = token
+        return node
+    }
 
-            var controlNode = new Parser.ASTNode
-            controlNode.type = MindustryParser.KEYWORDNode
-            controlNode.lineNum = this.currentToken.lineNum
-            controlNode.keyword = {type: type.toUpperCase(), code: []}
+    isLexicalDeclaration() {
+        this.removeNewlineAndComments()
+        var next = this.tokens.nextPreview
+        return (
+            next instanceof MindustryTokens.PHRASE ||
+            (next instanceof MindustryTokens.PAREN && ["[", "{"].includes(next.subtypeObject.char))
+        )
+    }
 
-            //GET CONDITION:
-            this.advance()
-            controlNode.keyword.condition = this.parseStatement(ast, numOpenParens)
-            this.removeNewline()
+    /**
+     * Marks the provided token (or current token if not provided) as a keyword, so it can be seen in the syntax highlighted code
+     * @param token {Token|undefined}
+     */
+    markAsKeyword(token = undefined) {
+        if (!token) token = this.currentToken
+        token.subtype = "keyword"
+    }
 
-            //GET CODE:
-            if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[4]) {
-                this.advance()
-                this.removeNewline()
+    /**
+     * @param node {Parser.ASTNode}
+     * @return {number}
+     */
+    addNode(node) {
+        var i = this.ast.nodePool.indexOf(node)
+        if (i > -1) return i
+        this.ast.nodePool.push(node)
+        return this.ast.nodePool.length - 1
+    }
 
-                while (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[5])) {
-                    controlNode.keyword.code.push(this.parseStatement(ast, numOpenParens, true))
-                    this.removeNewline()
-                }
+    /**
+     * @param nodes {Parser.ASTNode[]}
+     * @return {number[]}
+     */
+    addNodes(nodes) {
+        return nodes.map(node => this.addNode(node))
+    }
 
-                this.advance()
-            } else //single line
-                controlNode.keyword.code.push(this.parseStatement(ast, numOpenParens, true))
-
-            //IF NOT IF, NO ELSE STATEMENT POSSIBLE SO JUST RETURN
-            if (type !== MindustryParser.KEYWORDS.flow[0]) return this.addNode(ast, controlNode)
-
-            //CHECK FOR ELSE:
-            this.removeNewline()
-
-            if (this.currentToken instanceof MindustryTokens.PHRASE && this.currentToken.content === MindustryParser.KEYWORDS.else) {
-                this.currentToken.subtype = "keyword"
-                controlNode.keyword.hasElse = true
-                controlNode.keyword.elseCode = []
-
-                this.advance()
-                this.removeNewline()
-                if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[4]) { //multi-line
-                    this.advance()
-                    this.removeNewline()
-
-                    while (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[5])) {
-                        controlNode.keyword.elseCode.push(this.parseStatement(ast, numOpenParens, true))
-                        this.removeNewline()
-                    }
-
-                    this.advance()
-                } else //single-line / else-if
-                    controlNode.keyword.elseCode.push(this.parseStatement(ast, numOpenParens, true))
-            } else controlNode.keyword.hasElse = false
-
-            return this.addNode(ast, controlNode)
-        }
-        //CHECK IF FUNCTION DEFINITION:
-        if (this.currentToken instanceof MindustryTokens.PHRASE && (MindustryParser.KEYWORDS.func.includes(this.currentToken.content))) {
-            var funcNode = new Parser.ASTNode()
-            funcNode.type = MindustryParser.KEYWORDNode
-            funcNode.lineNum = this.currentToken.lineNum
-            funcNode.keyword = {type: this.currentToken.content.toUpperCase(), paramNames: [], code: []}
-            this.currentToken.subtype = "keyword"
-
-            this.advance()
-            this.removeNewline()
-
-            this.forcePhrase(this.currentToken)
-
-            funcNode.keyword.name = this.currentToken.content
-            this.currentToken.subtype = "function-definition"
-            this.advance()
-            this.removeNewline()
-
-            if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[0]) {//has parameters
-                this.advance()
-                numOpenParens.add()
-                this.continueStatement(numOpenParens)
-
-                //argument names:
-                while (true) {
-                    this.forcePhrase(this.currentToken)
-                    funcNode.keyword.paramNames.push(this.currentToken.content)
-                    this.advance()
-
-                    if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[1]) break
-                    else if (!(this.currentToken instanceof MindustryTokens.COMMA)) this.handleError(MindustryParser.ERROR_EXPECTED_OPERATOR, this.currentToken)
-
-                    this.advance()
-                    this.continueStatement(numOpenParens)
-                }
-
-                this.advance()
-                numOpenParens.sub()
-            }
-
-            this.removeNewline()
-
-            // GET CODE:
-            if (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[4])) //ensure open curly brace found
-                this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_CURLY, this.currentToken)
-
-            this.advance()
-            this.removeNewline()
-
-            while (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[5])) {
-                funcNode.keyword.code.push(this.parseStatement(ast, numOpenParens, true))
-                this.removeNewline()
-            }
-
-            this.advance()
-
-            return this.addNode(ast, funcNode)
-        }
-
-        //CHECK IF RETURN STATEMENT:
-        if (this.currentToken instanceof MindustryTokens.PHRASE && MindustryParser.KEYWORDS.return === this.currentToken.content) {
-            var returnNode = new Parser.ASTNode()
-            returnNode.type = MindustryParser.KEYWORDNode
-            returnNode.lineNum = this.currentToken.lineNum
-            returnNode.keyword = {type: MindustryParser.KEYWORDS.return.toUpperCase()}
-            this.currentToken.subtype = "keyword"
-
-            this.advance()
-            if (!(this.currentToken instanceof MindustryTokens.NEWLINE) && (
-                this.currentToken instanceof MindustryTokens.PAREN && (
-                    this.currentToken.subtypeObject === MindustryLexer.PARENS[1] || this.currentToken.subtypeObject === MindustryLexer.PARENS[3] ||
-                    this.currentToken.subtypeObject === MindustryLexer.PARENS[5]
-                )
-            )) //get return value if not a void return
-                returnNode.keyword.returnVal = this.parseStatement(ast, numOpenParens)
-            else returnNode.keyword.returnVal = null
-
-            return this.addNode(ast, returnNode)
-        }
-
-        //CHECK IF BREAK/CONTINUE STATEMENT:
-        if (this.currentToken instanceof MindustryTokens.PHRASE && MindustryParser.KEYWORDS.breakCont.includes(this.currentToken.content)) {
-            var breakNode = new Parser.ASTNode()
-            breakNode.type = MindustryParser.KEYWORDNode
-            breakNode.lineNum = this.currentToken.lineNum
-            breakNode.keyword = {type: this.currentToken.content.toUpperCase()}
-            this.currentToken.subtype = "keyword"
-
-            this.advance()
-            if (!(this.currentToken instanceof MindustryTokens.NEWLINE) && (
-                this.currentToken instanceof MindustryTokens.PAREN && (
-                    this.currentToken.subtypeObject === MindustryLexer.PARENS[1] || this.currentToken.subtypeObject === MindustryLexer.PARENS[3] ||
-                    this.currentToken.subtypeObject === MindustryLexer.PARENS[5]
-                )
-            )) //get return value if not a void return
-                this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.currentToken)
-
-            return this.addNode(ast, breakNode)
-        }
-
-        //MUST BE REGULAR OPERATION:
-        var left, right
-
-        //GET LEFT TOKEN: (only if not operator)
-        if (!(this.currentToken instanceof MindustryTokens.OPERATOR || this.currentToken instanceof MindustryTokens.SET)) {
-            if (beginningOfLine) {
-                var state = this.tokens.getState()
-                this.setQuietError()
-                try {
-                    left = this.parseNonOPBeginning(ast, numOpenParens)
-                } catch {
-                    this.setQuietError(false)
-                    this.tokens.setState(state)
-                    left = this.parsePhrase(ast, numOpenParens)
-                } finally {
-                    this.setQuietError(false)
-                }
-            } else left = this.parseNonOP(ast, numOpenParens)
-        }
-
-        //CHECK IF LINE ENDED:
-        if (this.currentToken instanceof MindustryTokens.NEWLINE || (
-            this.currentToken instanceof MindustryTokens.PAREN && (
-                this.currentToken.subtypeObject === MindustryLexer.PARENS[4] || this.currentToken.subtypeObject === MindustryLexer.PARENS[1] ||
-                this.currentToken.subtypeObject === MindustryLexer.PARENS[3] || this.currentToken.subtypeObject === MindustryLexer.PARENS[5]
+    removeNewlineAndComments() {
+        while (this.currentToken instanceof MindustryTokens.NEWLINE ||
+            this.currentToken instanceof MindustryTokens.COMMENT
             )
-        ) || this.currentToken instanceof MindustryTokens.COMMA || this.tokens.done) return left
-
-        //GET OP TOKEN:
-        var opNode = this.getOPNode(ast, numOpenParens, typeof left === "undefined" ? null : left)
-        if (opNode.type === MindustryParser.SETNode && beginningOfLine) {
-            opNode.op.inParens = false
-            opNode.op.left = left
-            opNode.op.right = this.parseStatement(ast, numOpenParens)
-            return this.addNode(ast, opNode)
-        }
-
-        //GET RIGHT TOKEN:
-        if (!(this.currentToken instanceof MindustryTokens.OPERATOR)) right = this.parseNonOP(ast, numOpenParens)
-
-        //CONSTRUCT OP NODE:
-        opNode.op.inParens = false
-        opNode.op.left = left
-        opNode.op.right = right
-
-        //ITERATE TO GET REST OF NODES:
-        var newOp
-        while (!this.tokens.done && !(this.currentToken instanceof MindustryTokens.NEWLINE) && !(this.currentToken instanceof MindustryTokens.PAREN && (
-            this.currentToken.subtypeObject === MindustryLexer.PARENS[4] || this.currentToken.subtypeObject === MindustryLexer.PARENS[1] ||
-            this.currentToken.subtypeObject === MindustryLexer.PARENS[3] || this.currentToken.subtypeObject === MindustryLexer.PARENS[5]
-        ))) {
-            if (beginningOfLine) {
-                newOp = this.getOPNode(ast, numOpenParens, opNode.op.right || null)
-                beginningOfLine = false
-            } else
-                newOp = this.getOPNode(ast, numOpenParens, opNode.op.left)
-
-            right = this.parseNonOP(ast, numOpenParens);
-
-            //ADD TO EXISTING NODES WITH CORRECT ORDER OF OPERATIONS:
-            if (this.precedence(newOp.op) >= this.precedence(opNode.op)) {
-                newOp.op.left = this.addNode(ast, opNode);
-                newOp.op.right = right;
-                opNode = newOp;
-            } else {
-                //find rightmost op with lesser order:
-                var rightMost = opNode;
-                var rightModeRight = ast.nodePool[rightMost.op.right];
-                while (rightModeRight instanceof MindustryTokens.OPERATOR && this.precedence(newOp.op) < this.precedence(rightModeRight.op) && !rightMost.op.inParens) {
-                    rightMost = ast.nodePool[rightMost.op.right];
-                    rightModeRight = ast.nodePool[rightMost.op.right];
-                }
-
-                newOp.op.left = rightMost.op.right;
-                newOp.op.right = right;
-                rightMost.op.right = this.addNode(ast, newOp);
-            }
-        }
-
-        return this.addNode(ast, opNode)
-    }
-
-    parseNonOPBeginning(ast, numOpenParens) {
-        if (!this.currentToken instanceof MindustryTokens.PHRASE) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.currentToken)
-        var varNode = new Parser.ASTNode
-        varNode.type = MindustryParser.PHRASENode
-        varNode.lineNum = this.currentToken.lineNum
-        varNode.phrase = {type: "MULTI-VAR", names: []}
-        while (this.currentToken instanceof MindustryTokens.PHRASE || this.currentToken instanceof MindustryTokens.OPERATOR) {
-            if (this.currentToken instanceof MindustryTokens.OPERATOR) {
-                var newPhrase = new MindustryTokens.PHRASE(undefined, this.currentToken.subtypeObject.chars)
-                newPhrase.lineNum = this.currentToken.lineNum
-                this.currentToken.switchTo(newPhrase)
-            }
-            varNode.phrase.names.push(this.currentToken.content)
-            if (this.currentToken.content.startsWith("tmp_")) this.currentToken.subtype = "invalid"
             this.advance()
-            if (this.currentToken instanceof MindustryTokens.SET) break
-            else if (this.currentToken instanceof MindustryTokens.OPERATOR) this.handleError(MindustryParser.ERROR_UNEXPECTED_OPERATOR, this.currentToken)
-            else if (!(this.currentToken instanceof MindustryTokens.COMMA)) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.currentToken)
-            this.advance()
-        }
-        this.removeNewline()
-        if (!varNode.phrase.names.length) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.currentToken) //Can't have blank assigned to something
-        else if (varNode.phrase.names.length === 1) {
-            varNode.phrase.type = "VAR"
-            varNode.phrase.name = varNode.phrase.names[0]
-            delete varNode.phrase.names
-        }
-
-        return this.addNode(ast, varNode)
     }
 
-    parseNonOP(ast, numOpenParens) {
-        var node
-        if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[0]) node = this.parseStatementInParens(ast, numOpenParens)
-        else node = this.parsePhrase(ast, numOpenParens)
-        this.continueStatement(numOpenParens)
-        return node
-    }
-
-    parseStatementInParens(ast, numOpenParens) {
-        numOpenParens.add()
-        this.advance()
-        var node = this.parseStatement(ast, numOpenParens)
-        if (!(this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[1])) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN)
-        //console.log("Statement in parens, node:", ast.nodePool[node])
-        if (ast.nodePool[node].type === MindustryParser.OPNode || ast.nodePool[node].type === MindustryParser.SETNode) ast.nodePool[node].op.inParens = true
-
-        numOpenParens.sub()
-        this.advance()
-        return node
-    }
-
-    parsePhrase(ast, numOpenParens) {
-        var negative = false, minusNode, negOne
-        if (this.currentToken instanceof MindustryTokens.OPERATOR && this.currentToken.subtypeObject === MindustryLexer.OPERATORS[1]) {
-            negative = true
-            this.advance()
-        }
-
-        // this.forcePhrase(this.currentToken) For some reason crashes it
-
-        // REFRESH - idk why, but it's necessary, otherwise it thinks newline is the function name token (it's the this.currentToken)
-        this.tokens.undo(1)
-        this.advance()
-
-        //FUNCTION:
-        if (this.tokens.nextPreview instanceof MindustryTokens.PAREN && this.tokens.nextPreview.subtypeObject === MindustryLexer.PARENS[0]) {
-            if (!(this.currentToken instanceof MindustryTokens.PHRASE)) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.currentToken)
-            var funcNode = new Parser.ASTNode
-            funcNode.type = MindustryParser.PHRASENode
-            funcNode.lineNum = this.currentToken.lineNum
-            funcNode.phrase = {
-                type: "FUNC",
-                name: this.currentToken.content,
-                params: []
-            }
-            this.currentToken.subtype = "function-call"
-            this.advance()
-            this.advance()
-            numOpenParens.add()
-            this.continueStatement(numOpenParens)
-
-            //0 argument function:
-            if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[1]) {
-                this.advance()
-                numOpenParens.sub()
-                return this.addNode(ast, funcNode)
-            }
-
-            //arguments:
-            while (true) {
-                funcNode.phrase.params.push(this.parseStatement(ast, numOpenParens))
-
-                if (this.currentToken instanceof MindustryTokens.PAREN && this.currentToken.subtypeObject === MindustryLexer.PARENS[1]) break
-                else if (!(this.currentToken instanceof MindustryTokens.COMMA)) this.handleError(MindustryParser.ERROR_EXPECTED_OPERATOR, this.currentToken)
-
-                this.advance()
-                this.continueStatement(numOpenParens)
-            }
-
-            this.advance()
-            numOpenParens.sub()
-
-            if (negative) {
-                minusNode = new Parser.ASTNode
-                minusNode.type = MindustryParser.OPNode
-                minusNode.lineNum = this.currentToken.lineNum
-                minusNode.op = {type: "SUB-TODO"}
-
-
-                negOne = new Parser.ASTNode
-                negOne.type = MindustryParser.NUMBERNode
-                negOne.lineNum = this.currentToken.lineNum
-                negOne.literal = {value: -1}
-
-                minusNode.op = {
-                    left: this.addNode(ast, negOne),
-                    right: this.addNode(ast, funcNode),
-                    type: MindustryLexer.OPERATORS[2]
-                }
-                return this.addNode(ast, minusNode)
-            } else return this.addNode(ast, funcNode)
-        }
-
-        var token = this.currentToken
-        this.advance()
-
-        //NUMBER:
-        if (token instanceof MindustryTokens.VALUE) {
-            if (token.subtype === "number" || token.subtype === "hex-number" || token.subtype === "color") return this.getNumberNode(ast, numOpenParens, token)
-            if (token.subtype === "string") return this.getStringNode(ast, numOpenParens, token)
-        }
-
-        //VARIABLE:
-        if (!this.tokens.lastPreview) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, this.tokens.lastValid)
-        var varNode = new Parser.ASTNode
-        varNode.type = MindustryParser.PHRASENode
-        varNode.lineNum = this.tokens.lastPreview.lineNum
-        varNode.phrase = {type: "VAR", name: this.tokens.lastPreview.content}
-        if (this.tokens.lastPreview.content.startsWith("tmp_")) this.tokens.lastPreview.subtype = "invalid"
-
-        //index into variable:
-        // NOT DOING THAT
-
-        if (negative) {
-            minusNode = new Parser.ASTNode
-            minusNode.type = MindustryParser.OPNode
-            minusNode.lineNum = this.currentToken.lineNum
-            minusNode.op = {type: "SUB-TODO"}
-
-
-            negOne = new Parser.ASTNode
-            negOne.type = MindustryParser.NUMBERNode
-            negOne.lineNum = this.currentToken.lineNum
-            negOne.literal = {value: -1}
-
-            minusNode.op = {
-                left: this.addNode(ast, negOne),
-                right: this.addNode(ast, varNode),
-                type: MindustryLexer.OPERATORS[2]
-            }
-            return this.addNode(ast, minusNode)
-        } else return this.addNode(ast, varNode)
-    }
-
-    getNumberNode(ast, numOpenParens, token) {
-        var numNode = new Parser.ASTNode
-        numNode.type = MindustryParser.NUMBERNode
-        numNode.lineNum = this.tokens.lastPreview.lineNum
-        numNode.literal = {value: token.content, type: token.subtype}
-        return this.addNode(ast, numNode)
-    }
-
-    getStringNode(ast, numOpenParens, token) {
-        var strNode = new Parser.ASTNode
-        strNode.type = MindustryParser.STRINGNode
-        strNode.lineNum = this.tokens.lastPreview.lineNum
-        strNode.literal = {value: token.content}
-        return this.addNode(ast, strNode)
-    }
-
-    getOPNode(ast, numOpenParens, leftNode) {
-        //ENSURE ACTUALLY AN OP:
-        if (!(this.currentToken instanceof MindustryTokens.OPERATOR || this.currentToken instanceof MindustryTokens.SET)) this.handleError(MindustryParser.ERROR_EXPECTED_OPERATOR, this.currentToken)
-
-        var opNode = new Parser.ASTNode
-        opNode.lineNum = this.currentToken.lineNum
-        opNode.op = {}
-        if (this.currentToken instanceof MindustryTokens.SET) {
-            opNode.type = MindustryParser.SETNode
-            opNode.op.type = MindustryLexer.SET_OP
-            opNode.set = opNode.op
-        } else {
-            opNode.type = MindustryParser.OPNode
-            opNode.op.type = this.currentToken.subtypeObject
-            // console.log(this.currentToken, this.currentToken.subtypeObject.has2inputs, leftNode, ast.nodePool[leftNode])
-            if (this.currentToken.subtypeObject.has2inputs ^ (leftNode !== null)) this.handleError(MindustryParser.ERROR_INVALID_OPERATOR, this.currentToken)
-        }
-
-        this.advance()
-        this.continueStatement(numOpenParens)
-        return opNode;
-    }
-
-    addNode(ast, node) {
-        ast.nodePool.push(node)
-        return ast.nodePool.length - 1
-    }
-
-    continueStatement(numOpenParens) {
-        if (this.currentToken instanceof MindustryTokens.NEWLINE && numOpenParens.get() !== 0) {
-            this.advance()
-            if (this.tokens.done) this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
-        }
-    }
-
-    removeNewline() {
+    /*removeNewline() {
         while (this.currentToken instanceof MindustryTokens.NEWLINE) this.advance()
+    }*/
+
+    handleError(msg, tok) {
+        if (msg === MindustryParser.ERROR_UNEXPECTED_TOKEN) {
+            if (typeof tok === "undefined" && !this.currentToken) {
+                super.handleError(MindustryParser.ERROR_UNEXPECTED_EOF, undefined)
+            } else if (tok instanceof MindustryTokens.NEWLINE) {
+                super.handleError(MindustryParser.ERROR_UNEXPECTED_NEWLINE, {lineNum: tok.lineNum})
+            }
+        }
+        super.handleError(msg, tok);
     }
 
-    precedence(op) {
-        // console.warn(op.type.precedence / 10)
-        return op.type.precedence / 10
+    /**
+     * @param type {string|function():Parser.ASTNode}
+     * @param token {Token|undefined}
+     * @return {Parser.ASTNode}
+     */
+    createNode(type, token = undefined) {
+        var isNodeType = typeof type === "string"
+        var node = isNodeType ? new Parser.ASTNode : type()
+        isNodeType && (node.type = type)
+        node.lineNum = (token || this.currentToken).lineNum
+        return node
     }
 
-    forcePhrase(token) {
-        if (!(token instanceof MindustryTokens.PHRASE)) this.handleError(MindustryParser.ERROR_UNEXPECTED_OPERATOR, token)
-        Object.values(MindustryParser.KEYWORDS).forEach(function (keywords) {
-            if (keywords.includes(token.content)) this.handleError(MindustryParser.ERROR_INVALID_TOKEN, token)
-        }, this)
+    static {
+        this.KEYWORDS_LIST = Array.from(Object.values(this.KEYWORDS))
     }
 }
+
+// TODO Support negative numbers (-69 instead of 0 - 69)
+// TODO Compile the tree

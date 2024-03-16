@@ -1,0 +1,10 @@
+## Store a and b into c
+a = 123 ## 8 bits (0 - 255)
+b = 231 ## 8 bits
+c = a << 8 + b
+write(cell1, 0, c)
+
+## Back
+c = read(cell1, 0)
+b = c b-and 0xFF
+a = (c >> 8) b-and 0xFF

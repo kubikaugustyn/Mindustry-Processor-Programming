@@ -1,0 +1,8 @@
+a = 8 + 7
+#*AST should be:
+        SET
+      /     \
+     a      ADD (OPERATION:ADD)
+           /   \
+          8     7
+*#

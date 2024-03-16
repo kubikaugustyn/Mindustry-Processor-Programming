@@ -113,8 +113,8 @@ class ProcessorTypes {
             new ProcessorTypeValueRules.INTEGER()
         ]
     }
-    static COLOR = class extends ProcessorType {
-        name = "color"
+    static COLOR_NUMBER = class extends ProcessorType {
+        name = "color number"
         rules = [
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.POSITIVE(),
@@ -152,7 +152,9 @@ class ProcessorTypes {
             new ProcessorTypeValueRules.IN_RANGE(0, 1)
         ]
     }
-    static COLOR_NUMBER = class extends ProcessorTypes.NUMBER {
+    static COLOR = class extends ProcessorTypes.NUMBER {
+        name = "color"
+        // 0xRRGGBBAA
         rules = [
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.IN_RANGE(0, 0xFFFFFFFF)
@@ -186,6 +188,18 @@ class ProcessorTypes {
             ["name", "STRING"],
             ["color", "NUMBER"] // Some bullsh*t float but whatever
         ])
+    }
+    static ITEM = class extends ProcessorTypes.CONTENT {
+        name = "content-item"
+    }
+    static LIQUID = class extends ProcessorTypes.CONTENT {
+        name = "content-liquid"
+    }
+    static BLOCK = class extends ProcessorTypes.CONTENT {
+        name = "content-block"
+    }
+    static UNIT_TYPE = class extends ProcessorTypes.CONTENT {
+        name = "content-unit"
     }
     //Team.baseTeams
     static ALL_BASE_TEAMS = ["derelict", "sharded", "crux", "malis", "green", "blue"]

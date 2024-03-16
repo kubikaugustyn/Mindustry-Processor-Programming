@@ -1,0 +1,24 @@
+a = rand 69
+## One if
+if (a < 1){
+	## Do something here
+}
+else {
+	## Do something else here
+}
+
+## Another if
+if (a not 8 + 6){
+	a = 8
+}
+else {
+	a = rand 100
+}
+
+## Third if
+## See, {} and newlines are optional
+cmp = lookup.item(a)
+if (cmp == target)
+	a = 7
+else a = rand 92
+b = 72 max a

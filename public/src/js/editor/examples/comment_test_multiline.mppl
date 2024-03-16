@@ -1,0 +1,6 @@
+##Test of multiline
+a = 9
+#* Test
+Test1*#
+a = read(cell1, 0) #*Reads cell1
+etc.*#

@@ -348,7 +348,7 @@ class MindustryCompiler extends Compiler {
 
     nodeToString(ast, node, addedFuncs, addedVars) {
         if (node.type === MindustryParser.NUMBERNode) return node.literal.value
-        if (node.type === MindustryParser.PHRASENode) {
+        if (node.type === MindustryParser.IDENTIFIERNode) {
             if (node.phrase.type === "VAR") return node.phrase.name
         }
         //console.log(node.type, node)
@@ -395,7 +395,7 @@ class MindustryCompiler extends Compiler {
                         break
                 }*/
                 break
-            case MindustryParser.PHRASENode:
+            case MindustryParser.IDENTIFIERNode:
                 if (node.phrase.type === "VAR") name = node.phrase.name
                 else if (node.phrase.type === "FUNC") {
                     this.compileFunctionCall(ast, node, addedFuncs, addedVars, null)
@@ -578,12 +578,12 @@ class MindustryCompiler extends Compiler {
      */
     equal(ast, varNode, valNode, addedFuncs, addedVars) {
         // console.log(...arguments)
-        if (varNode.type !== MindustryParser.PHRASENode || (varNode.phrase.type !== "VAR" && varNode.phrase.type !== "MULTI-VAR")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
+        if (varNode.type !== MindustryParser.IDENTIFIERNode || (varNode.phrase.type !== "VAR" && varNode.phrase.type !== "MULTI-VAR")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
 
         //this.block(ProcessorTokens.SET, varNode.phrase.name, valNode)
-        if (varNode.phrase.type !== "VAR" && (valNode.type !== MindustryParser.PHRASENode || valNode.phrase.type !== "FUNC")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
-        if (varNode.phrase.type === "VAR" && valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "VAR") this.block(ProcessorTokens.SET, varNode.phrase.name, valNode.phrase.name)
-        else if (valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "FUNC") this.compileFunctionCall(ast, valNode, addedFuncs, addedVars, varNode.phrase.name || varNode.phrase.names)
+        if (varNode.phrase.type !== "VAR" && (valNode.type !== MindustryParser.IDENTIFIERNode || valNode.phrase.type !== "FUNC")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
+        if (varNode.phrase.type === "VAR" && valNode.type === MindustryParser.IDENTIFIERNode && valNode.phrase.type === "VAR") this.block(ProcessorTokens.SET, varNode.phrase.name, valNode.phrase.name)
+        else if (valNode.type === MindustryParser.IDENTIFIERNode && valNode.phrase.type === "FUNC") this.compileFunctionCall(ast, valNode, addedFuncs, addedVars, varNode.phrase.name || varNode.phrase.names)
         else this.compileStatement(ast, valNode, addedFuncs, addedVars, varNode.phrase.name)
         return varNode.phrase.name
     }
@@ -600,12 +600,12 @@ class MindustryCompiler extends Compiler {
         // TODO
         // MindustryCompiler.OPtoJUMP
         // console.log(...arguments)
-        if (varNode.type !== MindustryParser.PHRASENode || (varNode.phrase.type !== "VAR" && varNode.phrase.type !== "MULTI-VAR")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
+        if (varNode.type !== MindustryParser.IDENTIFIERNode || (varNode.phrase.type !== "VAR" && varNode.phrase.type !== "MULTI-VAR")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
 
         //this.block(ProcessorTokens.SET, varNode.phrase.name, valNode)
-        if (varNode.phrase.type !== "VAR" && (valNode.type !== MindustryParser.PHRASENode || valNode.phrase.type !== "FUNC")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
-        if (varNode.phrase.type === "VAR" && valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "VAR") this.block(ProcessorTokens.SET, varNode.phrase.name, valNode.phrase.name)
-        else if (valNode.type === MindustryParser.PHRASENode && valNode.phrase.type === "FUNC") this.compileFunctionCall(ast, valNode, addedFuncs, addedVars, varNode.phrase.name || varNode.phrase.names)
+        if (varNode.phrase.type !== "VAR" && (valNode.type !== MindustryParser.IDENTIFIERNode || valNode.phrase.type !== "FUNC")) this.error(MindustryCompiler.RuntimeError.INVALID_ASSIGNMENT, varNode)
+        if (varNode.phrase.type === "VAR" && valNode.type === MindustryParser.IDENTIFIERNode && valNode.phrase.type === "VAR") this.block(ProcessorTokens.SET, varNode.phrase.name, valNode.phrase.name)
+        else if (valNode.type === MindustryParser.IDENTIFIERNode && valNode.phrase.type === "FUNC") this.compileFunctionCall(ast, valNode, addedFuncs, addedVars, varNode.phrase.name || varNode.phrase.names)
         else this.compileStatement(ast, valNode, addedFuncs, addedVars, varNode.phrase.name)
     }
 
@@ -868,7 +868,7 @@ class MindustryCompiler extends Compiler {
 
                 //store count constants
                 c.push(new co("@" + cname + "Count", new ProcessorTypes.POSITIVE_INTEGER, amount));
-                // console.groupCollapsed(cname, amount)
+                console.groupCollapsed(cname, amount)
                 /**
                  * @type {string[]}
                  */
@@ -878,11 +878,11 @@ class MindustryCompiler extends Compiler {
                     pointer += 2
                     var name = ""
                     for (var j = 0; j < nameLength; j++) name += String.fromCharCode(read.getUint8(pointer++))
-                    // console.log(name)
+                    console.log(name)
                     names[i] = name
                 }
                 ProcessorTypes["ALL_" + cname.toUpperCase() + "S"] = names
-                // console.groupEnd()
+                console.groupEnd()
             }
         }
         ////LOAD////

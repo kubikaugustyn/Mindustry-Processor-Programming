@@ -4,6 +4,83 @@
       "path": "main.mppl",
       "name": "Main example",
       "description": "Example covering all main functions of MPPL"
+    },
+    {
+      "path": "if_else.mppl",
+      "name": "If/Else statements",
+      "description": "An example showing the use of conditional expressions"
+    },
+    {
+      "path": "while.mppl",
+      "name": "While statement",
+      "description": "An example showing the use of a while statement"
+    },
+    {
+      "path": "for.mppl",
+      "name": "For statement",
+      "description": "An example showing the use of a for statement"
+    },
+    {
+      "path": "function.mppl",
+      "name": "Function statement",
+      "description": "An example showing the use of an function"
+    },
+    {
+      "path": "block_control.mppl",
+      "name": "Block controlling",
+      "description": "An example showing how to control in-game blocks"
+    },
+    {
+      "path": "unit_control.mppl",
+      "name": "Unit controlling",
+      "description": "An example showing how to control in-game units"
+    },
+    {
+      "path": "math.mppl",
+      "name": "Math",
+      "description": "An example showing how to use math"
+    },
+    {
+      "path": "more_storage.mppl",
+      "name": "More storage",
+      "description": "An example showing how to get more storage from a memory cell"
+    },
+    {
+      "path": "item_to_index.mppl",
+      "name": "Store items in memory",
+      "description": "An example showing how to get items into a memory cell without manual mapping"
+    }
+  ],
+  "debug_examples": [
+    {
+      "path": "comment_test.mppl",
+      "name": "Test comments",
+      "description": "Example for testing comments"
+    },
+    {
+      "path": "comment_test_multiline.mppl",
+      "name": "Test multiline comments",
+      "description": "Example for testing multiline comments"
+    },
+    {
+      "path": "return.mppl",
+      "name": "Test function returns",
+      "description": "Example for testing function return values"
+    },
+    {
+      "path": "ast.mppl",
+      "name": "AST check",
+      "description": "An example for checking the correctness of the generated AST"
+    },
+    {
+      "path": "ast2.mppl",
+      "name": "AST check 2",
+      "description": "Another example for checking the correctness of the generated AST"
+    },
+    {
+      "path": "ast3.mppl",
+      "name": "AST check 3",
+      "description": "A third example for checking the correctness of the generated AST"
     }
   ]
 }

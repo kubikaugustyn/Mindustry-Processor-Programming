@@ -1,12 +1,13 @@
 var __author__ = "kubik.augustyn@post.cz"
 
 class MindustryTokens {
-    static DUMMY = class extends Token { // Just a token to replace tokens when grouping tokens together
+    /*static DUMMY = class extends Token { // Just a token to replace tokens when grouping tokens together
         // E.g. <PHRASE><PAREN_PAIR><PAREN_PAIR> --> <FUNCTION_CALL><DUMMY><DUMMY>
         // Because of our syntax highlighting algorithm
         type = "dummy"
         style = "copy"
-    }
+        // DEPRECATED!!!!!!!
+    }*/
     static TAB = class extends Token {
         type = "tab"
     }
@@ -79,6 +80,15 @@ class MindustryTokens {
     static COMMA = class extends Token {
         type = "comma"
     }
+    static DOT = class extends Token {
+        type = "dot"
+    }
+    static COLON = class extends Token {
+        type = "colon"
+    }
+    static SEMICOLON = class extends Token {
+        type = "semicolon"
+    }
     static COMMENT = class extends Token {
         type = "comment"
         subtypeStyle = {
@@ -95,10 +105,21 @@ class MindustryTokens {
     static PHRASE = class extends Token {
         type = "phrase"
         subtypeStyle = {
-            "invalid": {color: "red"},
+            "invalid": {
+                color: "black",
+                "text-decoration": "underline",
+                "text-decoration-style": "wavy",
+                "text-decoration-color": "red"
+            },
             "keyword": {color: "rgb(0, 51, 179)"},
             "function-call": {"font-style": "italic"},
-            "function-definition": {"font-style": "italic", color: "rgb(0, 97, 125)"},
+            "function-declaration": {"font-style": "italic", color: "rgb(0, 97, 125)"},
+            "function-param": {
+                color: "black",
+                "text-decoration": "underline",
+                "text-decoration-style": "solid",
+                "text-decoration-color": "black"
+            },
             "variable-invalid-reassignment": {"text-decoration": "underline", "text-decoration-color": "blue"},
             "variable-invalid-not-assigned": {
                 "text-decoration": "underline",
@@ -107,10 +128,11 @@ class MindustryTokens {
             },
             "constant": {color: "rgb(19,218,143)"},
             "variable": {color: "rgb(36, 143, 143)"},
+            "variable-type": {color: "rgb(97,47,225)"},
             "param": {color: "green"},
-            "label": {color: "lightgreen"},
+            // "label": {color: "lightgreen"}, Cancelled
             "link": {color: "gray"},
-            "*": {color: "cyan"}
+            "*": {color: "rgb(23,208,208)"}
         }
     }
 }

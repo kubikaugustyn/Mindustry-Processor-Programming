@@ -1,0 +1,13 @@
+## Convert item (target) to a pointer to it (index for lookup.item)
+target = @titanium
+a = 0
+while (a < @itemsCount){
+	cmp = lookup.item(a)
+	if (cmp == target) {
+		break
+	}
+	a += 1
+}
+
+## Use this (a shorthand):
+a = lookup.itemReverse(@titanium)

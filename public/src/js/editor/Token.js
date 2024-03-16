@@ -8,6 +8,10 @@ class Token {
     style
     subtypeStyle
     lineNum
+    /**
+     * @type {{from:number,to:number}|undefined} From, to char index
+     */
+    range
     original
 
     /**
@@ -16,9 +20,9 @@ class Token {
      * @param subtypeObject {any}
      */
     constructor(subtype = "", content = undefined, subtypeObject = undefined) {
-        subtype && (this.subtype = subtype)
-        typeof content !== "undefined" && (this.content = content)
-        subtypeObject && (this.subtypeObject = subtypeObject)
+        this.subtype = subtype
+        this.content = content
+        this.subtypeObject = subtypeObject
         this.init()
         this.original = true
 
@@ -35,6 +39,10 @@ class Token {
 
     atLine(line) {
         this.lineNum = line
+    }
+
+    atRange(from, to) {
+        this.range = {from, to}
     }
 
     toString() {
