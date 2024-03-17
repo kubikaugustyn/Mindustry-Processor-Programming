@@ -29,6 +29,8 @@ class MindustryParser extends Parser {
     static ERROR_ILLEGAL_BREAK = "Illegal break statement outside a loop or a switch statement"
     static ERROR_ILLEGAL_CONTINUE = "Illegal continue statement outside a loop"
     static ERROR_ILLEGAL_RETURN = "Illegal return statement outside a function"
+    static ERROR_ILLEGAL_FUNCTION_LOCATION = "Illegal function declaration within another function, a loop or a switch statement"
+    static ERROR_VARIABLE_REDEFINITION_MISMATCH = "When re-defining a variable, the type or whether it's constant don't match"
     static ERROR_MULTIPLE_DEFAULTS_IN_SWITCH = "Multiple default cases in a switch statement"
     static ERROR_INTERNAL_ERROR = "Internal error, see the console for more information"
 
@@ -76,6 +78,35 @@ class MindustryParser extends Parser {
          * @type {boolean}
          */
         inSwitch
+        /**
+         * The current variable scope
+         * @type {ProcessorVariables}
+         */
+        scope
+
+        constructor() {
+            this.isAssignmentTarget = false
+            this.inFunctionBody = false
+            this.inIteration = false
+            this.inSwitch = false
+            this.scope = new ProcessorVariables()
+        }
+
+        /**
+         * Pushes a new child scope on top of the scope stack
+         * @return {ProcessorVariables} The new child scope
+         */
+        pushChildScope() {
+            return this.scope = this.scope.clone(true)
+        }
+
+        /**
+         * Pops a child scope off the scope stack
+         */
+        popChildScope() {
+            if (!this.scope.parent) throw new Error("Cannot pop the child scope further")
+            this.scope = this.scope.parent
+        }
     }
     static Params = class Params {
         /**
@@ -113,6 +144,10 @@ class MindustryParser extends Parser {
      * @type {MindustryParser.Context}
      */
     ctx
+    /**
+     * @type {ProcessorVariable[]}
+     */
+    variables
     /**
      * @type {Parser.AST}
      */
@@ -196,7 +231,7 @@ class MindustryParser extends Parser {
                 } else {
                     if (this.matchParen("(", this.tokens.nextPreview)) {
                         var calleeToken = this.currentToken
-                        var callee = this.parseIdentifierName()
+                        var callee = this.parseIdentifierName("get")
                         statement = this.parseCallExpression(calleeToken, callee, new MindustryParser.Params(false, false))
                     } else
                         statement = this.parseForcedAssignmentExpression(new MindustryParser.Params(false, false))
@@ -233,8 +268,8 @@ class MindustryParser extends Parser {
                     statement = this.parseWhileStatement()
                     break
                 default:
-                    this.handleError(MindustryParser.ERROR_UNEXPECTED_KEYWORD,this.currentToken)
-                    // statement = this.parseExpressionStatement()
+                    this.handleError(MindustryParser.ERROR_UNEXPECTED_KEYWORD, this.currentToken)
+                // statement = this.parseExpressionStatement()
             }
         } else
             this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
@@ -334,18 +369,22 @@ class MindustryParser extends Parser {
      */
     parseFunctionDeclaration() {
         // <function func(NUMBER a, b; STRING c) {...}>
+        if (this.ctx.inFunctionBody || this.ctx.inSwitch || this.ctx.inIteration)
+            this.handleError(MindustryParser.ERROR_ILLEGAL_FUNCTION_LOCATION, this.currentToken)
         var startToken = this.currentToken
 
         if (!this.matchKeyword(MindustryParser.KEYWORDS.FUNCTION)) this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, this.currentToken)
         this.markAsKeyword()
         this.advance()
 
+        var scope = this.ctx.pushChildScope()
         this.currentToken.subtype = "function-declaration"
-        var identifier = this.addNode(this.parseIdentifierName())
+        var identifier = this.addNode(this.parseIdentifierName("none"))
         var params = this.addNodes(this.parseFormalParameters())
         var body = this.addNode(this.parseFunctionSourceElements())
+        this.ctx.popChildScope()
 
-        return this.finalize(new MindustryNodes.FunctionDeclaration(identifier, params, body), startToken)
+        return this.finalize(new MindustryNodes.FunctionDeclaration(identifier, params, body, scope), startToken)
     }
 
     /**
@@ -353,6 +392,9 @@ class MindustryParser extends Parser {
      */
     parseFormalParameters() {
         // function func<(NUMBER a, b; STRING c)> {...}
+        /**
+         * @type {MindustryNodes.Parameter[]}
+         */
         var params = []
         if (!this.matchParen("(")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
         this.advance()
@@ -367,6 +409,10 @@ class MindustryParser extends Parser {
                 type.subtype = "variable-type"
                 this.checkVariableType(type) // Just to make sure
                 this.advance()
+                var paramType = new ProcessorTypes[type.content]()
+                var isPointer = false
+                // TODO Implement pointer params
+                console.warn("Pointer params not implemented")
 
                 while (this.currentToken) {
                     var identifier = this.currentToken
@@ -376,8 +422,10 @@ class MindustryParser extends Parser {
                         MindustryParser.KEYWORDS_LIST.includes(identifier.content))
                         this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
                     if (identifier.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, identifier)
-                    identifier.subtype = "function-param"
-                    params.push(this.finalize(new MindustryNodes.Identifier(identifier.content), identifier))
+                    var isValid = this.registerVariable(identifier.content, paramType, false, isPointer, identifier)
+                    identifier.subtype = isValid ? "function-param" : "function-param-invalid"
+                    var paramName = this.addNode(this.finalize(new MindustryNodes.Identifier(identifier.content), identifier))
+                    params.push(this.finalize(new MindustryNodes.Parameter(paramName, paramType), identifier))
                     this.advance()
 
                     if (this.matchParen(")") || this.currentToken instanceof MindustryTokens.SEMICOLON) break
@@ -643,7 +691,7 @@ class MindustryParser extends Parser {
         // <NUMBER A = 9, b = 5, c = 6>
         var type = this.currentToken
         if (params.isConst) {
-            this.currentToken.subtype = "constant"
+            this.markAsKeyword()
             this.advance()
             type = this.currentToken
         }
@@ -697,8 +745,6 @@ class MindustryParser extends Parser {
      */
     parseLexicalBinding(params) {
         // NUMBER <A = 9>, b = 5, c = 6
-        var declarator = new MindustryNodes.VariableDeclarator
-
         var name = this.currentToken
         if (name.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, name)
         if (MindustryParser.KEYWORDS_LIST.includes(name.content) || ProcessorTypes.ALL_TYPES.includes(name.content))
@@ -709,13 +755,14 @@ class MindustryParser extends Parser {
         this.advance()
         var init = this.addNode(this.isolateCoverGrammar(this.parseAssignmentExpression, params))
         var identifier = this.addNode(this.finalize(new MindustryNodes.Identifier(name.content), name))
+        var valueType = new ProcessorTypes[params.variableType.content]()
 
-        declarator.initializer = init
-        declarator.variableName = identifier
-        declarator.isConst = params.isConst
-        declarator.valueType = params.variableType.content
+        var isValid = this.registerVariable(name.content, valueType, params.isConst, params.isPointer, name)
+        name.subtype = isValid ?
+            (params.isConst ? "constant" : "variable") :
+            "variable-invalid-redefinition"
 
-        return this.finalize(declarator, name)
+        return this.finalize(new MindustryNodes.VariableDeclarator(identifier, init, params.isConst, params.isPointer, valueType), name)
     }
 
     /**
@@ -745,7 +792,7 @@ class MindustryParser extends Parser {
      */
     parseForcedAssignmentExpression(params) {
         var startToken = this.currentToken
-        var target = this.addNode(this.parseIdentifierName())
+        var target = this.addNode(this.parseIdentifierName("set"))
         if (!this.matchSet()) this.handleError(MindustryParser.ERROR_EXPECTED_SET, this.currentToken)
         this.advance()
         var value = this.addNode(this.finalize(this.isolateCoverGrammar(this.parseConditionalExpression, params)))
@@ -890,7 +937,7 @@ class MindustryParser extends Parser {
                 var holderToken = this.tokens.lastPreview
                 this.ctx.isAssignmentTarget = true
                 this.advance()
-                prop = this.addNode(this.parseIdentifierName())
+                prop = this.addNode(this.parseIdentifierName("none"))
                 expr = this.finalize(new MindustryNodes.StaticMemberExpression(this.addNode(expr), prop), holderToken)
             } else if (this.matchParen("(")) {
                 /**
@@ -927,9 +974,10 @@ class MindustryParser extends Parser {
     }
 
     /**
+     * @param asVariableKind {"set"|"get"|"none"} Whether the identifier is meant as a variable getter
      * @return {MindustryNodes.Identifier}
      */
-    parseIdentifierName() {
+    parseIdentifierName(asVariableKind) {
         var identifier = this.currentToken
         this.advance()
         var name = identifier.content
@@ -937,6 +985,12 @@ class MindustryParser extends Parser {
             this.handleError(MindustryParser.ERROR_UNEXPECTED_TOKEN, identifier)
         if (MindustryParser.KEYWORDS_LIST.includes(name) || ProcessorTypes.ALL_TYPES.includes(name))
             this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
+        if (asVariableKind !== "none") {
+            var {subtype, isConst} = this.isValidAndConstVariable(name, identifier)
+            identifier.subtype = (isConst && asVariableKind === "set") ?
+                "variable-invalid-const-assignment" :
+                subtype
+        }
         return this.finalize(new MindustryNodes.Identifier(name), identifier)
     }
 
@@ -950,9 +1004,13 @@ class MindustryParser extends Parser {
             var nameToken = this.currentToken
             this.advance()
             if (name === MindustryParser.KEYWORDS.FUNCTION) {
+                // TODO Figure out what is this for
+                console.warn("What is this useful for?")
                 this.ctx.isAssignmentTarget = false
                 return this.finalize(new MindustryNodes.Identifier(this.currentToken.content), this.currentToken)
             } else {
+                var {subtype} = this.isValidAndConstVariable(name, nameToken)
+                nameToken.subtype = subtype
                 return this.finalize(new MindustryNodes.Identifier(name), nameToken)
             }
         } else if (this.currentToken instanceof MindustryTokens.VALUE) {
@@ -1058,6 +1116,41 @@ class MindustryParser extends Parser {
         var result = parseFunction.bind(this, params)()
         this.ctx.isAssignmentTarget = previousIsAssignmentTarget && this.ctx.isAssignmentTarget
         return result
+    }
+
+    /**
+     * Registers a new variable within the current scope
+     * @param name {string}
+     * @param type {ProcessorType}
+     * @param isConst {boolean}
+     * @param isPointer {boolean}
+     * @param token {Token}
+     * @return {boolean} Whether the variable is valid
+     */
+    registerVariable(name, type, isConst, isPointer, token) {
+        if (this.ctx.scope.hasVariable(name)) {
+            var variable = this.ctx.scope.getVariable(name)
+            if (variable.constant !== isConst || variable.type.name !== type.name || variable.pointer !== isPointer)
+                this.handleError(MindustryParser.ERROR_VARIABLE_REDEFINITION_MISMATCH, token)
+        }
+        return this.ctx.scope.addVariable(name, type, isConst, isPointer)
+    }
+
+    /**
+     * @param name {string}
+     * @param token {Token|undefined}
+     * @return {{isValid:boolean,isConst:boolean,subtype:string}}
+     */
+    isValidAndConstVariable(name, token = undefined) {
+        if (this.ctx.scope.hasVariable(name)) {
+            var isConst = this.ctx.scope.getVariable(name).constant
+            return {isValid: true, isConst, subtype: isConst ? "constant" : "variable"}
+        } else if (MindustryCompiler.DEFAULT_CONSTANTS.find(constant => constant.name === name)) {
+            var subtype = name in ["true", "false", "null"] ? "default-value" : "default-constant"
+            return {isValid: true, isConst: true, subtype}
+        } else if (token.subtype === "param") {
+            return {isValid: true, isConst: true, subtype: "param"}
+        } else return {isValid: false, isConst: false, subtype: "variable-invalid-not-defined"}
     }
 
     /**

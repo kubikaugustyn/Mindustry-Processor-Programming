@@ -159,15 +159,16 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
 
             if (moveBy > 0) {
                 var nonTokenSpan = document.createElement("span")
-                nonTokenSpan.innerHTML = sanitizeCode(code.slice(position, position + moveBy)).replaceAll(/\r\n|\r|\n/g, "<br>")
+                nonTokenSpan.innerHTML = sanitizeCode(code.slice(position, position + moveBy)).replaceAll(/\r\n|\r|\n/g, "<br>").replaceAll(" ", "&nbsp;")
                 this.editorElements.code.appendChild(nonTokenSpan)
             }
             position += moveBy
             if (token) {
                 if (position !== token.range.from) throw new Error("Severe position mismatch error when syntax highlighting")
                 var tokenSpan = document.createElement("span")
-                tokenSpan.innerHTML = sanitizeCode(code.slice(token.range.from, token.range.to)).replaceAll(/\r\n|\r|\n/g, "<br>")
+                tokenSpan.innerHTML = sanitizeCode(code.slice(token.range.from, token.range.to)).replaceAll(/\r\n|\r|\n/g, "<br>").replaceAll(" ", "&nbsp;")
 
+                var title = undefined
                 if (token.style) {
                     var style = token.style
                     var i = 2
@@ -175,14 +176,26 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
                         style = tokens[tokenIndex - i]?.style
                         i++
                     }
-                    if (style) for (var [property, value] of Object.entries(style))
+                    if (style) for (var [property, value] of Object.entries(style)) {
+                        if (property === "title") {
+                            title = value
+                            continue
+                        }
                         tokenSpan.style.setProperty(property, value)
+                    }
                 }
                 if (token.subtypeStyle) {
                     var subtypeStyle = token.subtypeStyle[token.subtype] || token.subtypeStyle["*"]
-                    for (var [subtypeProperty, subtypeValue] of Object.entries(subtypeStyle))
+                    for (var [subtypeProperty, subtypeValue] of Object.entries(subtypeStyle)) {
+                        if (subtypeProperty === "title") {
+                            title = subtypeValue
+                            continue
+                        }
                         tokenSpan.style.setProperty(subtypeProperty, subtypeValue)
+                    }
                 }
+                if (title) tokenSpan.title = title
+                // TODO Show the title on hover (not have it obstructed by the textarea)
 
                 this.editorElements.code.appendChild(tokenSpan)
                 position = token.range.to
@@ -301,19 +314,31 @@ loadSaver.setHighlighter(highlighter)
 editor.insertBefore(loadSaver.getContainer(), editor.firstChild)
 document.body.appendChild(editor)
 // TODO make it load in the UI
-var codeExamples = [];
+var codeExamples = []
+var rootURL = document.location.origin + document.location.pathname;
 (function () {
     var DEBUG = true;
-    var rootURL = document.location.origin + document.location.pathname
     fetch(rootURL.substring(0, rootURL.lastIndexOf('/', rootURL.length - 2)) + "/src/js/editor/examples/examples.json").then(a => a.json()).then(examplesJson => {
         var examples = examplesJson.examples || []
         if (DEBUG) examplesJson.debug_examples?.forEach(a => examples.push(a))
         codeExamples = examples;
+
+        if (!highlighter.editorElements.input.value) showSampleScript()
     }).catch(e => console.error(e))
 })()
-highlighter.editorElements.input.value = localStorage.getItem("editor_code") || ""
+highlighter.editorElements.input.value = ""//localStorage.getItem("editor_code") || ""
+
 // Show a sample script
-if (!highlighter.editorElements.input.value) highlighter.editorElements.input.value = `#######################\n## Declare variables ##\n#######################\n## A constant variable of type NUMBER\nconst NUMBER a = a() + 8 + 3 angle-diff 9\n## Multiple mutable variables of type STRING\nSTRING b = "hello world", c = '*multiline*'\n## The color syntax is intuitive\nCOLOR d = 0caabbccdd\n## Wrong colors get highlighted\nCOLOR e = 0cabc\n## Now the pointer hell: this is a pointer to an ITEM\n*ITEM ptr = @titanium ## itemPointer 'called' at compilation\n## Dereference the pointer to an item\nITEM item = &ptr\n## Create a reference to the item once again\n*ITEM backPtr = itemPointer(item)\n## Get the arguments of a block\nNUMBER size = @size of 8\n## A more English approach\nNUMBER items = @items in 8\n\n#########################\n## Other functionality ##\n#########################\n## Declare functions\nfunction ahoj(NUMBER param1, param2; STRING err){\n\tif (param1  < 5) raiseToDefineMethod(err)\n\treturn 69 * param1 + param2\n}\n## Call functions like so:\ninit(arg1, 8, true, arg4)\n\n## Switch statement\nswitch (a) {\n\tcase 0:\n\t\tprint("Got 0")\n\tcase 1:\n\t\tprint("Got 1")\n\tdefault:\n\t\tprint("Got something else")\n}\n\n## This while loop\nNUMBER a = 0\nwhile (a < 8) {\n\tdoSomething()\n\ta = a + 1\n}\n## Is the equivalent of this one\nNUMBER a = 0\ndo {\n\tdoSomething()\n\ta = a + 1\n} while (a < 8)\n## Which can be further simplified to this:\nfor (NUMBER a = 0; a < 8; a = a + 1){\n\tdoSomething()\n}\n## Some iteration manipulation\nNUMBER a = 0\nwhile (true) {\n\tif (a >= 8) break\n\telse if (a == 3) continue\n\tdoSomething()\n\ta = a + 1\n}\n\n## As you have seen, flow control is simple\nif (a > 2) a = 2\nelse if (a < 0 - 2) a = 0 - 2\nelse a = rand a`
+function showSampleScript() {
+    var url = rootURL.substring(0, rootURL.lastIndexOf('/', rootURL.length - 2)) + "/src/js/editor/examples/" + codeExamples[0].path
+    fetch(url).then(a => a.text()).then(text => {
+        if (highlighter.editorElements.input.value) return
+        highlighter.editorElements.input.value = text
+        highlighter.onInput()
+        highlighter.onKeyUp()
+    }).catch(e => console.error(e))
+}
+
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")
 blocksViewContainer.style.height = "calc(100vh - 21px)"

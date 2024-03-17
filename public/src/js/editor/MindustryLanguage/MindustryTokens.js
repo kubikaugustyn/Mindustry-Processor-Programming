@@ -115,18 +115,37 @@ class MindustryTokens {
             "function-call": {"font-style": "italic"},
             "function-declaration": {"font-style": "italic", color: "rgb(0, 97, 125)"},
             "function-param": {
-                color: "black",
                 "text-decoration": "underline",
                 "text-decoration-style": "solid",
                 "text-decoration-color": "black"
             },
-            "variable-invalid-reassignment": {"text-decoration": "underline", "text-decoration-color": "blue"},
-            "variable-invalid-not-assigned": {
+            "function-param-invalid": {
                 "text-decoration": "underline",
                 "text-decoration-style": "wavy",
-                "text-decoration-color": "red"
+                "text-decoration-color": "orange",
+                title: "Parameter redefinition"
+            },
+            "variable-invalid-const-assignment": {
+                "text-decoration": "underline",
+                "text-decoration-style": "wavy",
+                "text-decoration-color": "red",
+                title: "Assignment to a constant variable"
+            },
+            "variable-invalid-redefinition": {
+                "text-decoration": "underline",
+                "text-decoration-style": "wavy",
+                "text-decoration-color": "orange",
+                title: "Variable redefinition"
+            },
+            "variable-invalid-not-defined": {
+                "text-decoration": "underline",
+                "text-decoration-style": "wavy",
+                "text-decoration-color": "red",
+                title: "Variable not defined"
             },
             "constant": {color: "rgb(19,218,143)"},
+            "default-constant": {color: "rgb(2,88,150)"},
+            "default-value": {color: "rgb(31,15,178)"},
             "variable": {color: "rgb(36, 143, 143)"},
             "variable-type": {color: "rgb(97,47,225)"},
             "param": {color: "green"},

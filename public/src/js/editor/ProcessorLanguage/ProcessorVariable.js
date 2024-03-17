@@ -40,11 +40,19 @@ class ProcessorVariables {
     /**
      * @type {ProcessorVariables[]}
      */
-    children
+    childScopes
+    /**
+     * @type {ProcessorVariables|undefined}
+     */
+    parent
 
-    constructor() {
+    /**
+     * @param parent {ProcessorVariables|undefined}
+     */
+    constructor(parent = undefined) {
         this.variables = new Map()
-        this.children = []
+        this.childScopes = []
+        this.parent = parent
     }
 
     /**
@@ -52,10 +60,10 @@ class ProcessorVariables {
      * @param type {ProcessorType}
      * @param constant {boolean}
      * @param pointer {boolean}
-     * @returns {boolean}
+     * @returns {boolean} Whether the variable is valid
      */
     addVariable(nameOrVariable, type, constant, pointer) {
-        for (var child of this.children) {
+        for (var child of this.childScopes) {
             if (nameOrVariable instanceof ProcessorVariable) {
                 if (!child.variables.has(nameOrVariable.name)) child.variables.set(nameOrVariable.name, nameOrVariable)
             } else if (!child.variables.has(nameOrVariable))
@@ -93,12 +101,12 @@ class ProcessorVariables {
      * @returns {ProcessorVariables}
      */
     clone(isChildScope = false) {
-        var clone = new ProcessorVariables()
+        var clone = new ProcessorVariables(this)
         for (var [name, variable] of this.variables.entries()) {
             if (name !== variable.name) throw Error("Variable name and pool name mismatch - never occurs")
             clone.addVariable(variable.name, variable.type, variable.constant, variable.pointer)
         }
-        if (isChildScope) this.children.push(clone)
+        if (isChildScope) this.childScopes.push(clone)
         return clone
     }
 }

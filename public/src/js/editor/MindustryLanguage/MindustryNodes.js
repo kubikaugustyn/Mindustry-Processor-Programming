@@ -52,9 +52,29 @@ var MindustryNodes = {
          */
         isConst
         /**
-         * @type {Token}
+         * @type {boolean}
+         */
+        isPointer
+        /**
+         * @type {ProcessorType}
          */
         valueType
+
+        /**
+         * @param variableName {number}
+         * @param initializer {number}
+         * @param isConst {boolean}
+         * @param isPointer {boolean}
+         * @param valueType {ProcessorType}
+         */
+        constructor(variableName, initializer, isConst, isPointer, valueType) {
+            super();
+            this.variableName = variableName
+            this.initializer = initializer
+            this.isConst = isConst
+            this.isPointer = isPointer
+            this.valueType = valueType
+        }
     },
     VariableDeclaration: class VariableDeclaration extends Parser.ASTNode {
         type = MindustryNodeType("VARIABLE_DECLARATION")
@@ -62,6 +82,14 @@ var MindustryNodes = {
          * @type {number[]}
          */
         declarators
+
+        /**
+         * @param declarators {number[]}
+         */
+        constructor(declarators) {
+            super();
+            this.declarators = declarators
+        }
     },
     Identifier: class Identifier extends Parser.ASTNode {
         type = MindustryNodeType("IDENTIFIER")
@@ -452,17 +480,23 @@ var MindustryNodes = {
          * @type {number}
          */
         body
+        /**
+         * @type {ProcessorVariables}
+         */
+        scope
 
         /**
          * @param identifier {number}
          * @param params {number[]}
          * @param body {number}
+         * @param scope {ProcessorVariables}
          */
-        constructor(identifier, params, body) {
+        constructor(identifier, params, body, scope) {
             super();
             this.identifier = identifier
             this.params = params
             this.body = body
+            this.scope = scope
         }
     },
     Parameter: class Parameter extends Parser.ASTNode {
@@ -472,13 +506,13 @@ var MindustryNodes = {
          */
         parameterName
         /**
-         * @type {Token}
+         * @type {ProcessorType}
          */
         valueType
 
         /**
          * @param parameterName {number}
-         * @param valueType {Token}
+         * @param valueType {ProcessorType}
          */
         constructor(parameterName, valueType) {
             super();
