@@ -1,0 +1,6 @@
+const BLOCK mem = cell1
+const POSITIVE_INTEGER addr = 1
+
+NUMBER a = read(mem, addr)
+a = a + 1
+write(mem, addr, a)

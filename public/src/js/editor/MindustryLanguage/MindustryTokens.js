@@ -30,7 +30,8 @@ class MindustryTokens {
             "color-invalid": {
                 "text-decoration": "underline",
                 "text-decoration-style": "wavy",
-                "text-decoration-color": "red"
+                "text-decoration-color": "rgb(245,158,108)",
+                title: "Invalid color format"
             },
             "*": {
                 color: "blue"
@@ -111,6 +112,13 @@ class MindustryTokens {
                 "text-decoration-style": "wavy",
                 "text-decoration-color": "red"
             },
+            "keyword-non-optimal-switch": {
+                color: "rgb(0, 51, 179)",
+                "text-decoration": "underline",
+                "text-decoration-style": "wavy",
+                "text-decoration-color": "lightgray",
+                title: "Non-optimal switch"
+            },
             "keyword": {color: "rgb(0, 51, 179)"},
             "function-call": {"font-style": "italic"},
             "function-declaration": {"font-style": "italic", color: "rgb(0, 97, 125)"},
@@ -140,7 +148,7 @@ class MindustryTokens {
             "variable-invalid-not-defined": {
                 "text-decoration": "underline",
                 "text-decoration-style": "wavy",
-                "text-decoration-color": "red",
+                "text-decoration-color": "rgb(245,158,108)",
                 title: "Variable not defined"
             },
             "constant": {color: "rgb(19,218,143)"},
@@ -150,7 +158,7 @@ class MindustryTokens {
             "variable-type": {color: "rgb(97,47,225)"},
             "param": {color: "green"},
             // "label": {color: "lightgreen"}, Cancelled
-            "link": {color: "gray"},
+            "link": {color: "gray", title: "A link to a block. Make sure to link that block to your processor"},
             "*": {color: "rgb(23,208,208)"}
         }
     }

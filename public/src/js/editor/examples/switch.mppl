@@ -1,0 +1,28 @@
+## This is an example of an optimal switch
+#*
+To create an optimal switch, multiple conditions must be met, but simply:
+1) Switch an integer directly or a variable of type POSITIVE_INTEGER
+2) Cases must check for an integer directly
+3) Difference between case values must not exceed 5 (case 1, case 9 is invalid)
+4) At least 2 cases must be provided
+5) Every case must end with break, because order of the case bodies is not guaranteed
+6) Default must be provided
+7) Break at the end of default is optional, because its position is guaranteed to be at the end of the switch
+*#
+POSITIVE_INTEGER itemID = 8
+ITEM item = null
+switch (itemID){
+	case 0:
+		item = @titanium
+		break
+	case 5:
+		item = @pyratite
+		markOverflow = true
+		break
+	case 7:
+		item = @coal
+		break
+	default:
+		item = @copper
+		break ## Break is purely optional here (only, see rules 5 and 7)
+}

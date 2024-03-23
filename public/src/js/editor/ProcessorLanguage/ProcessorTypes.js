@@ -29,6 +29,15 @@ class ProcessorTypeValueRules {
             return `in range &lt;${this.min}; ${this.max}&gt;`
         }
     }
+    static NUMBER = class extends ProcessorTypeValueRule {
+        isValid(value) {
+            return typeof value === "number"
+        }
+
+        toString() {
+            return `is number`
+        }
+    }
     static INTEGER = class extends ProcessorTypeValueRule {
         isValid(value) {
             return Number.isInteger(value)
@@ -75,6 +84,13 @@ class ProcessorType {
 
     }
 
+    isValid(value) {
+        for (var rule of this.rules) {
+            if (!rule.isValid(value)) return false
+        }
+        return true
+    }
+
     /**
      * @param other {ProcessorType}
      * @returns {boolean}
@@ -101,6 +117,7 @@ class ProcessorTypes {
     static BOOLEAN = class extends ProcessorType {
         name = "boolean"
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.IN_RANGE(0, 1)
         ]
@@ -110,12 +127,14 @@ class ProcessorTypes {
     }
     static INTEGER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER()
         ]
     }
     static COLOR_NUMBER = class extends ProcessorType {
         name = "color number"
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.POSITIVE(),
             new ProcessorTypeValueRules.IN_RANGE(0, 255)
@@ -123,12 +142,14 @@ class ProcessorTypes {
     }
     static BLOCK_ROTATION_NUMBER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.IN_RANGE(0, 3)
         ]
     }
     static UNIT_ROTATION_NUMBER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.IN_RANGE(0, 360)
         ]
     }
@@ -143,12 +164,14 @@ class ProcessorTypes {
         0 - otherwise
         */
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.IN_RANGE(0, 3)
         ]
     }
     static PERCENTAGE_NUMBER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.IN_RANGE(0, 1)
         ]
     }
@@ -156,28 +179,33 @@ class ProcessorTypes {
         name = "color"
         // 0xRRGGBBAA
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.IN_RANGE(0, 0xFFFFFFFF)
         ]
     }
     static ITEMS_LIQUIDS_NUMBER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.IN_RANGE(0, Infinity)
         ]
     }
     static POWER_NUMBER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER()
         ]
     }
     static POSITIVE_NUMBER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.POSITIVE()
         ]
     }
     static POSITIVE_INTEGER = class extends ProcessorTypes.NUMBER {
         rules = [
+            new ProcessorTypeValueRules.NUMBER(),
             new ProcessorTypeValueRules.INTEGER(),
             new ProcessorTypeValueRules.POSITIVE()
         ]

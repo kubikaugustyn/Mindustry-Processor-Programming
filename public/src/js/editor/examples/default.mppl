@@ -2,7 +2,7 @@
 ## Declare variables ##
 #######################
 ## A constant variable of type NUMBER
-const NUMBER a = a() + 8 + 3 angle-diff 9
+const NUMBER a = #*a() +*# 8 + 3 angle-diff 9
 a = 8 ## Assignment to a constant variable is highlighted, but no error is thrown
 a = "invalid" ## Assignment to a different type is your fault (yes, it's a TODO)
 ## Multiple mutable variables of type STRING
@@ -13,10 +13,10 @@ COLOR d = 0caabbccdd
 COLOR e = 0cabc
 ## Now the pointer hell: this is a pointer to an ITEM
 *ITEM ptr = @titanium ## itemPointer 'called' at compilation
-## Dereference the pointer to an item
-ITEM item = &ptr
+## Dereference the pointer to an item - TODD
+#*ITEM item = &ptr*#
 ## Create a reference to the item once again
-*ITEM backPtr = itemPointer(item)
+#**ITEM backPtr = itemPointer(item)*#
 ## Get the arguments of a block
 NUMBER size = @size of 8
 ## A more English approach
@@ -25,13 +25,13 @@ NUMBER items = @items in 8
 #########################
 ## Other functionality ##
 #########################
-## Declare functions
-function ahoj(NUMBER param1, param2; STRING err){
-	if (param1  < 5) raiseToDefineMethod(err)
+## Declare functions - TODO
+#*function ahoj(NUMBER param1, param2; STRING err){
+	if (param1 < 5) raiseToDefineMethod(err, items)
 	return 69 * param1 + param2
-}
+}*#
 ## Call functions like so:
-init(arg1, 8, true, arg4)
+##init(arg1, 8, true, arg4)
 
 ## Switch statement
 switch (a) {
@@ -46,25 +46,25 @@ switch (a) {
 ## This while loop
 NUMBER i = 0
 while (i < 8) {
-	doSomething()
+	##doSomething()
 	i = i + 1
 }
 ## Is the equivalent of this one
 NUMBER i = 0
 do {
-	doSomething()
+	##doSomething()
 	i = i + 1
 } while (a < 8)
 ## Which can be further simplified to this:
 for (NUMBER i = 0; a < 8; a = a + 1){
-	doSomething()
+	##doSomething()
 }
 ## Some iteration manipulation
 NUMBER i = 0
 while (true) {
 	if (i >= 8) break
 	else if (i == 3) continue
-	doSomething()
+	##doSomething()
 	i = i + 1
 }
 
@@ -72,3 +72,12 @@ while (true) {
 if (i > 2) i = 2
 else if (i < 0 - 2) i = 0 - 2
 else i = rand i
+
+## Basic functions
+NUMBER fromMem = read(cell1, 1)
+write(cell1, 1, fromMem)
+
+print("Hello world")
+printFlush(message1)
+## is the same as:
+println("Hello world", message1)

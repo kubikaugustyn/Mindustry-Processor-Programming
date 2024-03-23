@@ -140,7 +140,7 @@ class MindustryLexer extends Lexer {
         new MindustryLexer.OPERATOR("atan", "arc-tangent", false).prec(14).proc("atan"),
     ]
     static SET_OP = new MindustryLexer.OPERATOR("=", "set").prec(0);
-    static BOOLEAN = ["true", "false"]
+    static BOOLEAN = {"true": true, "false": false}
     static SET = "=";
     static COMMA = ",";
     static COMMENT = "#";
@@ -248,10 +248,10 @@ class MindustryLexer extends Lexer {
                 var {phrase, phraseRange, comma, commaRange} = this.generatePhrase()
                 this.forceRange = phraseRange
                 if (phrase.startsWith(MindustryLexer.PARAM_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "param", phrase)
-                    // else if (phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "label", phrase) Cancelled
+                // else if (phrase.startsWith(MindustryLexer.LABEL_PHRASE_PREFIX)) yield this.createToken(MindustryTokens.PHRASE, "label", phrase) Cancelled
                 // else if (MindustryCompiler.DEFAULT_CONSTANTS.find(a => a.name === phrase)) yield this.createToken(MindustryTokens.PHRASE, "constant", phrase)
-                else if (MindustryLexer.BOOLEAN.includes(phrase)) yield this.createToken(MindustryTokens.VALUE, "boolean", phrase)
-                else if (phrase === "null") yield this.createToken(MindustryTokens.VALUE, "null")
+                else if (phrase in MindustryLexer.BOOLEAN) yield this.createToken(MindustryTokens.VALUE, "boolean", MindustryLexer.BOOLEAN[phrase])
+                else if (phrase === "null") yield this.createToken(MindustryTokens.VALUE, "null", null)
                 // else if (MindustryLexer.KNOWN_PHRASES.includes(phrase)) yield this.createToken(MindustryTokens.KNOWN_PHRASE, "", phrase)
                 else if (this.checkPhraseLink(phrase)) yield this.createToken(MindustryTokens.PHRASE, "link", phrase)
                 else yield this.createToken(MindustryTokens.PHRASE, "", phrase)
@@ -269,6 +269,10 @@ class MindustryLexer extends Lexer {
         }
     }
 
+    /**
+     * @param phrase {string}
+     * @returns {boolean}
+     */
     checkPhraseLink(phrase) {
         if (!MindustryLexer.DIGITS.includes(phrase.slice(-1))) return false
         while (phrase.length && MindustryLexer.DIGITS.includes(phrase.slice(-1))) {
@@ -276,7 +280,7 @@ class MindustryLexer extends Lexer {
             phrase = phrase.slice(0, -1)
         }
         // Check if it's a block that can be a link
-        return ProcessorTypes.ALL_BLOCKS.find(a => a.split("-").at(-1) === phrase);
+        return !!ProcessorTypes.ALL_BLOCKS.find(a => a.split("-").at(-1) === phrase);
     }
 
     /**

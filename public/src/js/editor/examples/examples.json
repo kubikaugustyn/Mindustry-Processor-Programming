@@ -31,9 +31,19 @@
       "description": "An example showing the use of an function"
     },
     {
+      "path": "switch.mppl",
+      "name": "Switch statement",
+      "description": "An example showing the use of a switch statement"
+    },
+    {
       "path": "block_control.mppl",
       "name": "Block controlling",
       "description": "An example showing how to control in-game blocks"
+    },
+    {
+      "path": "read_write.mppl",
+      "name": "Read and write",
+      "description": "An example showing how to read from and write to memory blocks"
     },
     {
       "path": "unit_control.mppl",

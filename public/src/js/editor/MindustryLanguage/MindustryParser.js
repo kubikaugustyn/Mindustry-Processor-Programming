@@ -26,6 +26,7 @@ class MindustryParser extends Parser {
     static ERROR_INVALID_IDENTIFIER = "Invalid identifier - cannot use a type or a keyword as an identifier"
     static ERROR_INVALID_IDENTIFIER_KIND = "Invalid identifier - cannot use a property, constant or a link as an identifier"
     static ERROR_EXPECTED_SET = "Expected set (the = operator)"
+    static ERROR_INVALID_OPERATOR_INPUTS = "Invalid operator input count (operator accepts a different amount of arguments than those provided)"
     static ERROR_ILLEGAL_BREAK = "Illegal break statement outside a loop or a switch statement"
     static ERROR_ILLEGAL_CONTINUE = "Illegal continue statement outside a loop"
     static ERROR_ILLEGAL_RETURN = "Illegal return statement outside a function"
@@ -145,10 +146,6 @@ class MindustryParser extends Parser {
      */
     ctx
     /**
-     * @type {ProcessorVariable[]}
-     */
-    variables
-    /**
      * @type {Parser.AST}
      */
     ast
@@ -165,7 +162,7 @@ class MindustryParser extends Parser {
         var ast = Parser.AST.getAST()
         this.ast = ast
         ast.use()
-        console.log(ast)
+        // console.log(ast)
         // console.log(this.tokens.toArray())
         var i = 0, limit = 10_000
         this.removeNewlineAndComments()
@@ -422,7 +419,7 @@ class MindustryParser extends Parser {
                         MindustryParser.KEYWORDS_LIST.includes(identifier.content))
                         this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
                     if (identifier.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, identifier)
-                    var isValid = this.registerVariable(identifier.content, paramType, false, isPointer, identifier)
+                    var isValid = this.registerVariable(identifier.content, paramType, false, isPointer, true, identifier)
                     identifier.subtype = isValid ? "function-param" : "function-param-invalid"
                     var paramName = this.addNode(this.finalize(new MindustryNodes.Identifier(identifier.content), identifier))
                     params.push(this.finalize(new MindustryNodes.Parameter(paramName, paramType), identifier))
@@ -539,7 +536,7 @@ class MindustryParser extends Parser {
         var default_case, hasDefault = false
         if (!this.matchParen("{")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_CURLY, this.currentToken)
         this.advance()
-        while (true) {
+        while (!hasDefault) { // Addition: we only support default at the end of switch
             this.removeNewlineAndComments()
             if (this.matchParen("}")) break
             var clauseToken = this.currentToken
@@ -665,6 +662,7 @@ class MindustryParser extends Parser {
      * @return {MindustryNodes.BlockStatement}
      */
     parseBlock() {
+        this.removeNewlineAndComments()
         var startToken = this.currentToken
 
         if (!this.matchParen("{")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_CURLY, this.currentToken)
@@ -757,7 +755,7 @@ class MindustryParser extends Parser {
         var identifier = this.addNode(this.finalize(new MindustryNodes.Identifier(name.content), name))
         var valueType = new ProcessorTypes[params.variableType.content]()
 
-        var isValid = this.registerVariable(name.content, valueType, params.isConst, params.isPointer, name)
+        var isValid = this.registerVariable(name.content, valueType, params.isConst, params.isPointer, false, name)
         name.subtype = isValid ?
             (params.isConst ? "constant" : "variable") :
             "variable-invalid-redefinition"
@@ -770,6 +768,7 @@ class MindustryParser extends Parser {
      * @return {Parser.ASTNode}
      */
     parseAssignmentExpression(params) {
+        this.handleEOF()
         var startToken = this.currentToken
         var expr = this.parseConditionalExpression(params)
 
@@ -828,6 +827,8 @@ class MindustryParser extends Parser {
             var left = expr
             var right = this.isolateCoverGrammar(this.parseExponentiationExpression, params)
 
+            if (!token.subtypeObject.has2inputs) this.handleError(MindustryParser.ERROR_INVALID_OPERATOR_INPUTS, token)
+
             var stack = [left, token.subtypeObject, right]
             var precedences = [precedence]
             while (true) {
@@ -837,6 +838,9 @@ class MindustryParser extends Parser {
                 // Reduce: make a binary expression from the three topmost entries.
                 while (stack.length > 2 && precedence <= precedences[precedences.length - 1]) {
                     right = this.addNode(stack.pop())
+                    /**
+                     * @type {MindustryLexer.OPERATOR}
+                     */
                     var operator = stack.pop()
                     precedences.pop()
                     left = this.addNode(stack.pop())
@@ -845,6 +849,7 @@ class MindustryParser extends Parser {
 
                 // Shift.
                 stack.push(this.currentToken.subtypeObject)
+                if (!this.currentToken.subtypeObject.has2inputs) this.handleError(MindustryParser.ERROR_INVALID_OPERATOR_INPUTS, this.currentToken)
                 this.advance()
                 precedences.push(precedence)
                 stack.push(this.isolateCoverGrammar(this.parseExponentiationExpression, params))
@@ -855,8 +860,8 @@ class MindustryParser extends Parser {
             expr = stack[i]
 
             while (i > 1) {
-                operator = stack[i - 1]
-                expr = this.finalize(new MindustryNodes.BinaryExpression(operator, this.addNode(stack[i - 2]), this.addNode(expr)), startToken)
+                var op = stack[i - 1]
+                expr = this.finalize(new MindustryNodes.BinaryExpression(op, this.addNode(stack[i - 2]), this.addNode(expr)), startToken)
                 i -= 2
             }
         }
@@ -896,6 +901,7 @@ class MindustryParser extends Parser {
      * @return {Parser.ASTNode}
      */
     parseUnaryExpression(params) {
+        this.handleEOF()
         var isDeref = this.currentToken.subtypeObject === MindustryParser.DEREF_OP
         if (this.currentToken instanceof MindustryTokens.OPERATOR &&
             (!this.currentToken.subtypeObject.has2inputs || isDeref)
@@ -1037,12 +1043,14 @@ class MindustryParser extends Parser {
      * @return {Parser.ASTNode[]}
      */
     parseArguments(params) {
+        this.handleEOF()
         if (!this.matchParen("("))
             this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
         this.advance()
         var args = []
         if (!this.matchParen(")")) {
             while (true) {
+                this.handleEOF()
                 args.push(this.isolateCoverGrammar(this.parseAssignmentExpression, params))
                 if (this.matchParen(")")) break
                 this.expectCommaSeparator()
@@ -1124,16 +1132,17 @@ class MindustryParser extends Parser {
      * @param type {ProcessorType}
      * @param isConst {boolean}
      * @param isPointer {boolean}
+     * @param isArgument {boolean}
      * @param token {Token}
      * @return {boolean} Whether the variable is valid
      */
-    registerVariable(name, type, isConst, isPointer, token) {
+    registerVariable(name, type, isConst, isPointer, isArgument, token) {
         if (this.ctx.scope.hasVariable(name)) {
             var variable = this.ctx.scope.getVariable(name)
-            if (variable.constant !== isConst || variable.type.name !== type.name || variable.pointer !== isPointer)
+            if (variable.constant !== isConst || variable.type.name !== type.name || variable.pointer !== isPointer || variable.argument !== isArgument)
                 this.handleError(MindustryParser.ERROR_VARIABLE_REDEFINITION_MISMATCH, token)
         }
-        return this.ctx.scope.addVariable(name, type, isConst, isPointer)
+        return this.ctx.scope.addVariable(name, type, isConst, isPointer, isArgument)
     }
 
     /**
@@ -1142,15 +1151,29 @@ class MindustryParser extends Parser {
      * @return {{isValid:boolean,isConst:boolean,subtype:string}}
      */
     isValidAndConstVariable(name, token = undefined) {
+        console.log(token)
         if (this.ctx.scope.hasVariable(name)) {
-            var isConst = this.ctx.scope.getVariable(name).constant
-            return {isValid: true, isConst, subtype: isConst ? "constant" : "variable"}
+            var variable = this.ctx.scope.getVariable(name)
+            var isConst = variable.constant
+            var isArgument = variable.argument
+            return {
+                isValid: true,
+                isConst,
+                subtype: isConst ? "constant" : (isArgument ? "function-param" : "variable")
+            }
         } else if (MindustryCompiler.DEFAULT_CONSTANTS.find(constant => constant.name === name)) {
             var subtype = name in ["true", "false", "null"] ? "default-value" : "default-constant"
             return {isValid: true, isConst: true, subtype}
         } else if (token.subtype === "param") {
             return {isValid: true, isConst: true, subtype: "param"}
+        }  else if (token.subtype === "link") {
+            // Hope that the user linked that thing
+            return {isValid: true, isConst: true, subtype: "link"}
         } else return {isValid: false, isConst: false, subtype: "variable-invalid-not-defined"}
+    }
+
+    handleEOF() {
+        if (!this.currentToken) this.handleError(MindustryParser.ERROR_UNEXPECTED_EOF, this.tokens.lastValid)
     }
 
     /**

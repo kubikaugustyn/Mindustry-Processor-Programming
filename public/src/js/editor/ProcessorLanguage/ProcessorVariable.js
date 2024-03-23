@@ -17,18 +17,24 @@ class ProcessorVariable {
      * @type {boolean}
      */
     pointer
+    /**
+     * @type {boolean}
+     */
+    argument
 
     /**
      * @param name {string}
      * @param type {ProcessorType}
      * @param constant {boolean}
      * @param pointer {boolean}
+     * @param argument {boolean}
      */
-    constructor(name, type, constant, pointer) {
+    constructor(name, type, constant, pointer, argument) {
         this.name = name
         this.type = type
         this.constant = constant
         this.pointer = pointer
+        this.argument = argument
     }
 }
 
@@ -60,14 +66,15 @@ class ProcessorVariables {
      * @param type {ProcessorType}
      * @param constant {boolean}
      * @param pointer {boolean}
+     * @param argument {boolean}
      * @returns {boolean} Whether the variable is valid
      */
-    addVariable(nameOrVariable, type, constant, pointer) {
+    addVariable(nameOrVariable, type, constant, pointer, argument) {
         for (var child of this.childScopes) {
             if (nameOrVariable instanceof ProcessorVariable) {
                 if (!child.variables.has(nameOrVariable.name)) child.variables.set(nameOrVariable.name, nameOrVariable)
             } else if (!child.variables.has(nameOrVariable))
-                child.variables.set(nameOrVariable, new ProcessorVariable(nameOrVariable, type, constant, pointer))
+                child.variables.set(nameOrVariable, new ProcessorVariable(nameOrVariable, type, constant, pointer, argument))
         }
 
         if (nameOrVariable instanceof ProcessorVariable) {
@@ -76,7 +83,7 @@ class ProcessorVariables {
             return true
         }
         if (this.variables.has(nameOrVariable)) return false
-        this.variables.set(nameOrVariable, new ProcessorVariable(nameOrVariable, type, constant, pointer))
+        this.variables.set(nameOrVariable, new ProcessorVariable(nameOrVariable, type, constant, pointer, argument))
         return true
     }
 
@@ -104,7 +111,7 @@ class ProcessorVariables {
         var clone = new ProcessorVariables(this)
         for (var [name, variable] of this.variables.entries()) {
             if (name !== variable.name) throw Error("Variable name and pool name mismatch - never occurs")
-            clone.addVariable(variable.name, variable.type, variable.constant, variable.pointer)
+            clone.addVariable(variable.name, variable.type, variable.constant, variable.pointer, variable.argument)
         }
         if (isChildScope) this.childScopes.push(clone)
         return clone
