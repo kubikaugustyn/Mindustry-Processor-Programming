@@ -24,6 +24,7 @@ class MindustryParser extends Parser {
     static ERROR_EXPECTED_SEMICOLON = "Expected a semicolon separator"
     static ERROR_UNEXPECTED_KEYWORD = "Unexpected keyword (not implemented)"
     static ERROR_INVALID_IDENTIFIER = "Invalid identifier - cannot use a type or a keyword as an identifier"
+    static ERROR_INVALID_IDENTIFIER_PARAM = "Invalid identifier - cannot use a type or a keyword as an identifier. Maybe you wanted to separate a new argument type with a semicolon (;)?"
     static ERROR_INVALID_IDENTIFIER_KIND = "Invalid identifier - cannot use a property, constant or a link as an identifier"
     static ERROR_EXPECTED_SET = "Expected set (the = operator)"
     static ERROR_INVALID_OPERATOR_INPUTS = "Invalid operator input count (operator accepts a different amount of arguments than those provided)"
@@ -415,9 +416,10 @@ class MindustryParser extends Parser {
                     var identifier = this.currentToken
                     if (!(identifier instanceof MindustryTokens.PHRASE))
                         this.handleError(MindustryParser.ERROR_EXPECTED_IDENTIFIER, identifier)
-                    if (ProcessorTypes.ALL_TYPES.includes(identifier.content) ||
+                    var isType=ProcessorTypes.ALL_TYPES.includes(identifier.content)
+                    if (isType ||
                         MindustryParser.KEYWORDS_LIST.includes(identifier.content))
-                        this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
+                        this.handleError(isType?MindustryParser.ERROR_INVALID_IDENTIFIER_PARAM:MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
                     if (identifier.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, identifier)
                     var isValid = this.registerVariable(identifier.content, paramType, false, isPointer, true, identifier)
                     identifier.subtype = isValid ? "function-param" : "function-param-invalid"
@@ -1151,7 +1153,6 @@ class MindustryParser extends Parser {
      * @return {{isValid:boolean,isConst:boolean,subtype:string}}
      */
     isValidAndConstVariable(name, token = undefined) {
-        console.log(token)
         if (this.ctx.scope.hasVariable(name)) {
             var variable = this.ctx.scope.getVariable(name)
             var isConst = variable.constant

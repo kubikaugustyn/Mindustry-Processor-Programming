@@ -834,9 +834,10 @@ class MindustryCompiler extends Compiler {
                 ["text", new ProcessorTypes.ANY]
             ], undefined, [new ProcessorTokens.PRINT(["$text$"])]),
             new fn("println", [
-                ["text", new ProcessorTypes.ANY],
-                ["block", new ProcessorTypes.BLOCK]
-            ], undefined, [new ProcessorTokens.PRINT(["$text$"]), new ProcessorTokens.PRINT_FLUSH(["$block$"])]),
+                    ["text", new ProcessorTypes.ANY],
+                    ["block", new ProcessorTypes.BLOCK]
+                ], undefined, [new ProcessorTokens.PRINT(["$text$"]), new ProcessorTokens.PRINT_FLUSH(["$block$"])],
+                "function println(ANY text; BLOCK block) {\n\tprint(text)\n\tprintFlush(block)\n}"),
             new fn("printFlush", [
                 ["block", new ProcessorTypes.BLOCK]
             ], undefined, [new ProcessorTokens.PRINT_FLUSH(["$block$"])]),

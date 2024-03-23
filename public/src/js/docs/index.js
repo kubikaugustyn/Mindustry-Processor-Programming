@@ -1,11 +1,13 @@
 var __author__ = "kubik.augustyn@post.cz"
 
+var lexer = new MindustryLexer()
+var parser = new MindustryParser()
 var compiler = new MindustryCompiler()
 compiler.createLibFunctions()
 
 function init() {
     /**
-     * @type {FunctionSignature}
+     * @type {MindustryCompiler.NativeFunctionBinding}
      */
     var func
     var div
@@ -50,15 +52,13 @@ function renderProcessorType(processorType, name, container) {
 
 function mapTypeNamesToLinks(typeEntries, nameModifier = a => a) {
     return typeEntries.map(([name, value]) => {
-        var names = value.split("|")
+        var names = value.toString().split("|")
         return [nameModifier(name), names.map(name => name.includes('"') ? name : `<a href="#type-${name.toLowerCase()}">${name.replaceAll("_", " ")}</a>`).join(" OR ")]
     })
 }
 
 function mapTypesToLinks(typeNameEntries, nameModifier = a => a) {
-    return mapTypeNamesToLinks(typeNameEntries.map(([name, types]) => {
-        return [name, types.map(a => getProcessorTypeName(a)).join("|")]
-    }), nameModifier)
+    return mapTypeNamesToLinks(typeNameEntries, nameModifier)
 }
 
 function getProcessorTypeName(instance) {
@@ -73,21 +73,23 @@ function getProcessorTypeName(instance) {
 }
 
 /**
- * @param func {FunctionSignature}
+ * @param func {MindustryCompiler.NativeFunctionBinding}
  * @param container {HTMLDivElement}
  */
 function renderFunction(func, container) {
     //["read", "write"].includes(func.name) && console.log(func)
     var header = document.createElement("h2")
-    var funcName = `${func.name}(${Object.keys(func.arguments).join(", ")})`
-    header.innerHTML = `<a href='#function-${func.name}'>${(Object.keys(func.returns).length ? Object.keys(func.returns).join(", ") + " = " : "")}${funcName}</a>`
+    var funcName = `${func.name}(${func.arguments.map(a => a[0]).join(", ")})`
+    header.innerHTML = `<a href='#function-${func.name}'>${(func.returns ? "result = " : "")}${funcName}</a>`
     container.appendChild(header)
-    if (Object.keys(func.returns).length) createTable(container, mapTypesToLinks(Object.entries(func.returns)), ["Return", "Type"])
+    if (func.returns) createP(container, `Return type: <a href="#type-${func.returns.toString().toLowerCase()}">${func.returns.toString().replaceAll("_", " ")}</a>`)
     else createP(container, "Doesn't return anything")
-    if (Object.keys(func.arguments).length) createTable(container, mapTypesToLinks(Object.entries(func.arguments)), ["Argument", "Type"])
+    if (func.arguments.length) createTable(container, mapTypesToLinks(func.arguments), ["Argument", "Type"])
     else createP(container, "Doesn't have arguments")
-    if (func.content.length) createCode(container, func.content.map(a => new a[0](a.slice(1))))
+    if (func.instructions.length) createCode(container, func.instructions)
     else createP(container, "Doesn't have code")
+    if (func.code) createMPPL(container, func.code)
+    else createP(container, "Doesn't have MPPL implementation")
 }
 
 /**
@@ -143,4 +145,26 @@ function createCode(container, code) {
     return blocksViewContainer
 }
 
+/**
+ * @param container {HTMLDivElement}
+ * @param code {string}
+ */
+function createMPPL(container, code) {
+    var cont = document.createElement("div")
+    cont.style = "border: 1px solid black; width: fit-content; padding: 5px"
+    var tokensGenerator = lexer.regenerateTokens(code)
+    /**
+     * @type {Token[]}
+     */
+    var tokens = Array.from(tokensGenerator)
+    if (!MindustryCompiler.DEFAULT_CONSTANTS.length) new MindustryCompiler().createConstants()
+    parser.reparse(tokens.filter(token =>
+        !(token instanceof MindustryTokens.TAB || token instanceof MindustryTokens.COMMENT)
+    ))
+    highlightCode(cont, code, tokens)
+    container.appendChild(cont)
+    return cont
+}
+
 init()
+// createMPPL(document.body, "NUMBER a = 8")
