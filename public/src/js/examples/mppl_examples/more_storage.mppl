@@ -6,5 +6,5 @@ write(cell1, 0, c)
 
 ## Back
 c = read(cell1, 0)
-b = c b-and 0xFF
-a = (c >> 8) b-and 0xFF
+b = c & 0xFF
+a = (c >> 8) & 0xFF

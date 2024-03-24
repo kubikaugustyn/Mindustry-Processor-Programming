@@ -2,7 +2,7 @@
 ## Declare variables ##
 #######################
 ## A constant variable of type NUMBER
-const NUMBER a = #*a() +*# 8 + 3 angle-diff 9
+const POSITIVE_INTEGER a = #*a() +*# 8 + 3 angle-diff 9
 a = 8 ## Assignment to a constant variable is highlighted, but no error is thrown
 a = "invalid" ## Assignment to a different type is your fault (yes, it's a TODO)
 ## Multiple mutable variables of type STRING
@@ -37,10 +37,13 @@ NUMBER items = @items in 8
 switch (a) {
 	case 0:
 		print("Got 0")
+		break
 	case 1:
 		print("Got 1")
+		break
 	default:
 		print("Got something else")
+		break ## Optional
 }
 
 ## This while loop

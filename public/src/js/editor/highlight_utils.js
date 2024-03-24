@@ -124,3 +124,32 @@ function seeTitleTrough(targetTitleElement, sourcePoolElement) {
         if (!found) targetTitleElement.removeAttribute("title")
     })
 }
+
+/**
+ * @param container {HTMLDivElement}
+ * @param code {string}
+ */
+function createMPPL(container, code) {
+    var cont = document.createElement("div")
+    cont.style = "border: 1px solid black; width: fit-content; padding: 5px"
+    try {
+        var tokensGenerator = lexer.regenerateTokens(code)
+        /**
+         * @type {Token[]}
+         */
+        var tokens = Array.from(tokensGenerator)
+        MindustryCompiler.createConstants()
+        parser.reparse(tokens.filter(token =>
+            !(token instanceof MindustryTokens.TAB || token instanceof MindustryTokens.COMMENT)
+        ))
+        highlightCode(cont, code, tokens)
+    } catch (e) {
+        // Simple error handling
+        cont.style.color = "red"
+        cont.innerHTML = `${sanitizeCode(e.toString())}<hr>${prepareCodeForRender(code)}`
+    }
+    container.appendChild(cont)
+    return cont
+}
+
+// createMPPL(document.body, "NUMBER a = 8")

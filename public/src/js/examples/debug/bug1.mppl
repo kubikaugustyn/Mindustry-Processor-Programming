@@ -1,0 +1,4 @@
+## TODO Fix the bug
+POSITIVE_INTEGER cryo = @cryofluid in block
+POSITIVE_INTEGER heat = @heat in block
+BOOLEAN enable = cryo > 10 and heat == 0

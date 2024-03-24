@@ -35,8 +35,7 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
         return
     }
     if (/*!DEBUG_OPTIONS.PARSE || !DEBUG_OPTIONS.COMPILE && */!MindustryCompiler.DEFAULT_CONSTANTS.length) {
-        compiler.createConstants()
-        ProcessorTypes.reloadAll()
+        MindustryCompiler.createConstants()
     }
 
     function onError(msg, token, src) {
@@ -100,9 +99,6 @@ var highlighter = new SyntaxHighlighter("Mindustry", function (code) {
             // console.log("Got token:", token)
             tokens.push(token)
         }
-
-        // Will load the constants before compiler is implemented
-        if (!MindustryCompiler.DEFAULT_CONSTANTS.length) new MindustryCompiler().createConstants()
 
         console.log(tokens)
         parser.throwError = onError.bind(this)
@@ -185,31 +181,16 @@ editor.classList.add("left")
 loadSaver.setHighlighter(highlighter)
 editor.insertBefore(loadSaver.getContainer(), editor.firstChild)
 document.body.appendChild(editor)
-// TODO make it load in the UI
-var codeExamples = []
-var rootURL = document.location.origin + document.location.pathname;
-(function () {
-    var DEBUG = true;
-    fetch(rootURL.substring(0, rootURL.lastIndexOf('/', rootURL.lastIndexOf('/') - 1)) + "/src/js/editor/examples/examples.json").then(a => a.json()).then(examplesJson => {
-        var examples = examplesJson.examples || []
-        if (DEBUG) examplesJson.debug_examples?.forEach(a => examples.push(a))
-        codeExamples = examples;
-
-        if (!highlighter.editorElements.input.value) showSampleScript()
-    }).catch(e => console.error(e))
-})()
 highlighter.editorElements.input.value = localStorage.getItem("editor_code") || ""
 
 // Show a sample script
 function showSampleScript() {
-    var url = rootURL.substring(0, rootURL.lastIndexOf('/', rootURL.lastIndexOf('/') - 1)) + "/src/js/editor/examples/" + codeExamples[0].path
-    fetch(url).then(a => a.text()).then(text => {
-        if (highlighter.editorElements.input.value) return
-        highlighter.editorElements.input.value = text
-        highlighter.onInput()
-        highlighter.onKeyUp()
-    }).catch(e => console.error(e))
+    highlighter.editorElements.input.value = "#*\nSee the docs or examples if you don't know how to get started.\nhttps://mindustry-proc-programming.web.app/examples/\nhttps://mindustry-proc-programming.web.app/docs/\n*#"
+    highlighter.onInput()
+    highlighter.onKeyUp()
 }
+
+if (!highlighter.editorElements.input.value) showSampleScript()
 
 var blocksViewContainer = blocksView.getContainer()
 blocksViewContainer.classList.add("right")

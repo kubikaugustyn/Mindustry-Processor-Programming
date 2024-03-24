@@ -1,0 +1,12 @@
+const BUILDING mem = cell1
+const POSITIVE_INTEGER addr = 1
+const POSITIVE_INTEGER addr2 = 2
+
+NUMBER a =  read(mem, addr) ## Good way
+NUMBER b = mem[addr2]       ## bendn way
+
+a = a + 1
+b = b + 1
+
+write(a, mem, addr) ## Good way
+mem[addr2] = b      ## bendn way

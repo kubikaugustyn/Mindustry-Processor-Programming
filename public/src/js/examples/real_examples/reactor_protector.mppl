@@ -1,0 +1,37 @@
+#*
+Link this to a message (optional) and to multiple thorium reactors
+When the reactor reaches less than 10 cryofluid, it will be disabled.
+As you can see, complicated MLOG is simple with MPPL.
+Note that it can be further simplified, not creating so many variables,
+but I decided to create so many of them just to show the types.
+*#
+BOOLEAN hasMessage = message1 != null
+POSITIVE_INTEGER reactorI = 1
+for (POSITIVE_INTEGER i = 0; i < @links; i = i + 1){
+    ## First we get the link and check if it's a reactor
+    BUILDING reactor = getlink(i)
+    BLOCK type = @type of reactor
+    if (type != @thorium-reactor) continue
+
+    ## Then we read the important values
+    POSITIVE_INTEGER cryo = @cryofluid in reactor
+    POSITIVE_INTEGER heat = @heat in reactor
+
+    ## Then we decide whether it should be enabled
+    BOOLEAN enableCryo = cryo > 10
+    BOOLEAN enableHeat = heat == 0
+    BOOLEAN enable = enableCryo and enableHeat
+
+    ## Finally enable/disable it
+    control.enabled(reactor, enable)
+
+    ## Some printing to the message
+    if (hasMessage) {
+        print("Reactor #")
+        print(reactorI)
+        reactorI = reactorI + 1
+        if (enable) print(" [green]enabled[]\n")
+        else print(" [red]disabled[]\n")
+    }
+}
+if (hasMessage) printFlush(message1)

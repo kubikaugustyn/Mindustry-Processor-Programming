@@ -12,6 +12,7 @@ function init() {
     var func
     var div
     var container = document.getElementById("functions")
+    container.innerHTML = ""
     for (func of MindustryCompiler.DEFAULT_LIB_FUNCTIONS) {
         div = document.createElement("div")
         div.id = "function-" + func.name
@@ -19,6 +20,7 @@ function init() {
         container.appendChild(div)
     }
     container = document.getElementById("types")
+    container.innerHTML = ""
     var processorTypes = Object.keys(ProcessorTypes).filter(a => {
         try {
             return new ProcessorTypes[a] instanceof ProcessorType
@@ -51,9 +53,11 @@ function renderProcessorType(processorType, name, container) {
 }
 
 function mapTypeNamesToLinks(typeEntries, nameModifier = a => a) {
-    return typeEntries.map(([name, value]) => {
-        var names = value.toString().split("|")
-        return [nameModifier(name), names.map(name => name.includes('"') ? name : `<a href="#type-${name.toLowerCase()}">${name.replaceAll("_", " ")}</a>`).join(" OR ")]
+    return typeEntries.map(([propName, value]) => {
+        var names = typeof value === "string" ?
+            value.split("|") :
+            [Object.entries(ProcessorTypes).find(a => a[1] === value.constructor)[0]]
+        return [nameModifier(propName), names.map(name => name.includes('"') ? name : `<a href="#type-${name.toLowerCase()}">${name.replaceAll("_", " ")}</a>`).join(" OR ")]
     })
 }
 
@@ -145,26 +149,5 @@ function createCode(container, code) {
     return blocksViewContainer
 }
 
-/**
- * @param container {HTMLDivElement}
- * @param code {string}
- */
-function createMPPL(container, code) {
-    var cont = document.createElement("div")
-    cont.style = "border: 1px solid black; width: fit-content; padding: 5px"
-    var tokensGenerator = lexer.regenerateTokens(code)
-    /**
-     * @type {Token[]}
-     */
-    var tokens = Array.from(tokensGenerator)
-    if (!MindustryCompiler.DEFAULT_CONSTANTS.length) new MindustryCompiler().createConstants()
-    parser.reparse(tokens.filter(token =>
-        !(token instanceof MindustryTokens.TAB || token instanceof MindustryTokens.COMMENT)
-    ))
-    highlightCode(cont, code, tokens)
-    container.appendChild(cont)
-    return cont
-}
-
 init()
-// createMPPL(document.body, "NUMBER a = 8")
+

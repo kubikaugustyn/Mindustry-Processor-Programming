@@ -416,10 +416,10 @@ class MindustryParser extends Parser {
                     var identifier = this.currentToken
                     if (!(identifier instanceof MindustryTokens.PHRASE))
                         this.handleError(MindustryParser.ERROR_EXPECTED_IDENTIFIER, identifier)
-                    var isType=ProcessorTypes.ALL_TYPES.includes(identifier.content)
+                    var isType = ProcessorTypes.ALL_TYPES.includes(identifier.content)
                     if (isType ||
                         MindustryParser.KEYWORDS_LIST.includes(identifier.content))
-                        this.handleError(isType?MindustryParser.ERROR_INVALID_IDENTIFIER_PARAM:MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
+                        this.handleError(isType ? MindustryParser.ERROR_INVALID_IDENTIFIER_PARAM : MindustryParser.ERROR_INVALID_IDENTIFIER, identifier)
                     if (identifier.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, identifier)
                     var isValid = this.registerVariable(identifier.content, paramType, false, isPointer, true, identifier)
                     identifier.subtype = isValid ? "function-param" : "function-param-invalid"
@@ -793,11 +793,26 @@ class MindustryParser extends Parser {
      */
     parseForcedAssignmentExpression(params) {
         var startToken = this.currentToken
-        var target = this.addNode(this.parseIdentifierName("set"))
+        var target
+        if (!this.matchParen("[", this.tokens.nextPreview))
+            target = this.parseIdentifierName("set")
+        else {
+            // Parse the computed member (variable[index] = value)
+            target = this.parseIdentifierName("get")
+            if (!this.matchParen("[")) this.handleError(MindustryParser.ERROR_EXPECTED_OPENING_PAREN, this.currentToken)
+            this.ctx.isAssignmentTarget = true
+            this.advance()
+            var prop = this.addNode(this.isolateCoverGrammar(this.parseExpression, params))
+            if (!this.matchParen("]"))
+                this.handleError(MindustryParser.ERROR_EXPECTED_CLOSING_PAREN, this.currentToken)
+            this.advance()
+
+            target = this.finalize(new MindustryNodes.ComputedMemberExpression(this.addNode(target), prop), startToken)
+        }
         if (!this.matchSet()) this.handleError(MindustryParser.ERROR_EXPECTED_SET, this.currentToken)
         this.advance()
         var value = this.addNode(this.finalize(this.isolateCoverGrammar(this.parseConditionalExpression, params)))
-        return this.finalize(new MindustryNodes.AssignmentExpression(target, value), startToken)
+        return this.finalize(new MindustryNodes.AssignmentExpression(this.addNode(target), value), startToken)
     }
 
     /**
@@ -1167,7 +1182,7 @@ class MindustryParser extends Parser {
             return {isValid: true, isConst: true, subtype}
         } else if (token.subtype === "param") {
             return {isValid: true, isConst: true, subtype: "param"}
-        }  else if (token.subtype === "link") {
+        } else if (token.subtype === "link") {
             // Hope that the user linked that thing
             return {isValid: true, isConst: true, subtype: "link"}
         } else return {isValid: false, isConst: false, subtype: "variable-invalid-not-defined"}

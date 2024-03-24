@@ -1,0 +1,10 @@
+#*
+Link this to multiple thorium reactors
+When the reactor reaches less than 10 cryofluid, it will be disabled.
+As you can see, complicated MLOG is simple with MPPL.
+*#
+for (POSITIVE_INTEGER i = 0; i < @links; i = i + 1){
+    BUILDING reactor = getlink(i)
+    if (@type of reactor != @thorium-reactor) continue
+    control.enabled(reactor, @cryofluid in reactor > 10)
+}

@@ -112,6 +112,10 @@ class MindustryCompiler extends Compiler {
      */
     static DEFAULT_CONSTANTS = []
     /**
+     * @type {boolean}
+     */
+    static LOADED_ALL_DEFAULT_CONSTANTS = false
+    /**
      * @type {DynamicLink | undefined}
      */
     breakTarget
@@ -128,6 +132,10 @@ class MindustryCompiler extends Compiler {
         ["lessThan", "greaterThanEq"]
     ])
     static SWITCH_CMP_OP = MindustryLexer.OPERATORS.find(op => op.chars === "==")
+    static BINARY_MEMBER_OPs = [
+        MindustryLexer.OPERATORS.find(op => op.chars === "in"),
+        MindustryLexer.OPERATORS.find(op => op.chars === "of")
+    ]
     /**
      * @type {ArrayBuffer}
      */
@@ -198,7 +206,7 @@ class MindustryCompiler extends Compiler {
      */
     compile() {
         if (!MindustryCompiler.DEFAULT_LIB_FUNCTIONS.length) this.createLibFunctions()
-        if (!MindustryCompiler.DEFAULT_CONSTANTS.length) this.createConstants()
+        MindustryCompiler.createConstants()
         ProcessorTypes.reloadAll()
         /**
          * @type {Parser.AST}
@@ -338,10 +346,14 @@ class MindustryCompiler extends Compiler {
                 if (node instanceof MindustryNodes.CallExpression) this.compileCallExpression(node)
                 else this.never()
                 break
+            case MindustryNodeType("COMPUTED_MEMBER_EXPRESSION"):
+                if (node instanceof MindustryNodes.ComputedMemberExpression) this.compileComputedMemberExpression(node)
+                else this.never()
+                break
             case MindustryNodeType("EMPTY_STATEMENT"):
                 break
             default:
-                console.log(node)
+                console.log("Unsupported node:", node)
                 this.handleError(MindustryCompiler.CompileError.UNSUPPORTED_NODE_TYPE, node)
                 break
         }
@@ -372,7 +384,10 @@ class MindustryCompiler extends Compiler {
         this.requireTargetVarName(expression)
         var left = this.compileAssignedStatement(this.getNode(expression.left), false),
             right = this.compileAssignedStatement(this.getNode(expression.right), false)
-        this.block(ProcessorTokens.OPERATION, expression.operator.processorString, this.targetVarName, left, right)
+        if (MindustryCompiler.BINARY_MEMBER_OPs.includes(expression.operator))
+            this.block(ProcessorTokens.SENSOR, this.targetVarName, right, left)
+        else
+            this.block(ProcessorTokens.OPERATION, expression.operator.processorString, this.targetVarName, left, right)
     }
 
     /**
@@ -388,11 +403,47 @@ class MindustryCompiler extends Compiler {
      * @param expression {MindustryNodes.AssignmentExpression}
      */
     compileAssignmentExpression(expression) {
+        if (this.getNode(expression.left) instanceof MindustryNodes.ComputedMemberExpression) {
+            this.compileAssignmentToCellExpression(expression)
+            return
+        }
         var varName = this.getIdentifierName(expression.left)
         this.pushTargetVarName(varName)
         var result = this.compileAssignedStatement(this.getNode(expression.right), false)
         this.popTargetVarName()
         if (result !== varName) this.block(ProcessorTokens.SET, varName, result)
+    }
+
+    /**
+     * Note that this compiles only member setter
+     * @param expression {MindustryNodes.AssignmentExpression}
+     */
+    compileAssignmentToCellExpression(expression) {
+        /**
+         * @type {MindustryNodes.ComputedMemberExpression}
+         */
+        var memberExpression = this.getNode(expression.left, MindustryNodes.ComputedMemberExpression)
+        var target = this.compileAssignedStatement(this.getNode(memberExpression.expression), true)
+        var address = this.compileAssignedStatement(this.getNode(memberExpression.property), true)
+        var value = this.varNamesPool.nextAvailable()
+        this.pushTargetVarName(value)
+        value = this.compileAssignedStatement(this.getNode(expression.right), false)
+        this.popTargetVarName()
+        this.block(ProcessorTokens.WRITE, value, target, address)
+    }
+
+    /**
+     * Note that this compiles only member getter
+     * @param expression {MindustryNodes.ComputedMemberExpression}
+     */
+    compileComputedMemberExpression(expression) {
+        this.requireTargetVarName(expression)
+        var source = this.getIdentifierName(expression.expression)
+        var address = this.varNamesPool.nextAvailable()
+        this.pushTargetVarName(address)
+        address = this.compileAssignedStatement(this.getNode(expression.property), false)
+        this.popTargetVarName()
+        this.block(ProcessorTokens.READ, this.targetVarName, source, address)
     }
 
     /**
@@ -450,12 +501,14 @@ class MindustryCompiler extends Compiler {
     compileForStatement(statement) {
         var lastBreakTarget = this.breakTarget
         var lastContinueTarget = this.continueTarget
+        var updatePos = new MindustryCompiler.DynamicLink
 
         this.compileStatement(this.getNode(statement.init))
         var {jumpIfFalse: afterFor, testPos} = this.compileCondition(statement.test)
         this.breakTarget = afterFor
-        this.continueTarget = testPos
+        this.continueTarget = updatePos
         this.compileStatement(this.getNode(statement.body))
+        updatePos.target = this.blocks.length
         this.compileStatement(this.getNode(statement.update))
         this.block(ProcessorTokens.JUMP, testPos, "always")
         afterFor.target = this.blocks.length
@@ -822,29 +875,66 @@ class MindustryCompiler extends Compiler {
         var fn = MindustryCompiler.NativeFunctionBinding
         MindustryCompiler.DEFAULT_LIB_FUNCTIONS = [
             new fn("read", [
-                ["block", new ProcessorTypes.BUILDING],
-                ["addr", new ProcessorTypes.POSITIVE_INTEGER]
-            ], new ProcessorTypes.NUMBER, [new ProcessorTokens.READ(["$RETURN$", "$block$", "$addr$"])]),
+                    ["block", new ProcessorTypes.BUILDING],
+                    ["addr", new ProcessorTypes.POSITIVE_INTEGER]
+                ], new ProcessorTypes.NUMBER, [new ProcessorTokens.READ(["$RETURN$", "$block$", "$addr$"])],
+                "function read(BLOCK block; POSITIVE_INTEGER addr) {\n\treturn block[addr]\n}"),
             new fn("write", [
-                ["block", new ProcessorTypes.BUILDING],
-                ["addr", new ProcessorTypes.POSITIVE_INTEGER],
-                ["val", new ProcessorTypes.NUMBER]
-            ], undefined, [new ProcessorTokens.WRITE(["$val$", "$block$", "$addr$"])]),
+                    ["val", new ProcessorTypes.NUMBER],
+                    ["block", new ProcessorTypes.BUILDING],
+                    ["addr", new ProcessorTypes.POSITIVE_INTEGER]
+                ], undefined, [new ProcessorTokens.WRITE(["$val$", "$block$", "$addr$"])],
+                "function write(NUMBER val; BUILDING block; POSITIVE_INTEGER addr) {\n\tblock[addr] = val\n}"),
             new fn("print", [
                 ["text", new ProcessorTypes.ANY]
             ], undefined, [new ProcessorTokens.PRINT(["$text$"])]),
             new fn("println", [
                     ["text", new ProcessorTypes.ANY],
-                    ["block", new ProcessorTypes.BLOCK]
+                    ["block", new ProcessorTypes.BUILDING]
                 ], undefined, [new ProcessorTokens.PRINT(["$text$"]), new ProcessorTokens.PRINT_FLUSH(["$block$"])],
-                "function println(ANY text; BLOCK block) {\n\tprint(text)\n\tprintFlush(block)\n}"),
+                "function println(ANY text; BUILDING block) {\n\tprint(text)\n\tprintFlush(block)\n}"),
             new fn("printFlush", [
-                ["block", new ProcessorTypes.BLOCK]
+                ["block", new ProcessorTypes.BUILDING]
             ], undefined, [new ProcessorTokens.PRINT_FLUSH(["$block$"])]),
+            new fn("control.enabled", [
+                ["block", new ProcessorTypes.BUILDING],
+                ["value", new ProcessorTypes.ANY]
+            ], undefined, [new ProcessorTokens.CONTROL(["enabled", "$block$", "$value$"])]),
+            new fn("control.shoot", [
+                ["block", new ProcessorTypes.BUILDING],
+                ["x", new ProcessorTypes.NUMBER],
+                ["y", new ProcessorTypes.NUMBER],
+                ["shoot", new ProcessorTypes.BOOLEAN]
+            ], undefined, [new ProcessorTokens.CONTROL(["shoot", "$block$", "$x$", "$y$", "$shoot$"])]),
+            new fn("control.shootp", [
+                ["block", new ProcessorTypes.BUILDING],
+                ["unit", new ProcessorTypes.UNIT],
+                ["shoot", new ProcessorTypes.BOOLEAN]
+            ], undefined, [new ProcessorTokens.CONTROL(["shootp", "$block$", "$unit$", "$shoot$"])]),
+            new fn("control.config", [
+                ["block", new ProcessorTypes.BUILDING],
+                ["config", new ProcessorTypes.ANY]
+            ], undefined, [new ProcessorTokens.CONTROL(["config", "$block$", "$config$"])]),
+            new fn("control.color", [
+                ["block", new ProcessorTypes.BUILDING],
+                ["color", new ProcessorTypes.COLOR]
+            ], undefined, [new ProcessorTokens.CONTROL(["color", "$block$", "$color$"])]),
+            new fn("radar", [
+                ["block", new ProcessorTypes.BUILDING],
+                ["target1", new ProcessorTypes.RADAR_TARGET],
+                ["target2", new ProcessorTypes.RADAR_TARGET],
+                ["target3", new ProcessorTypes.RADAR_TARGET],
+                ["order", new ProcessorTypes.POSITIVE_INTEGER],
+                ["sort", new ProcessorTypes.RADAR_SORT]
+            ], new ProcessorTypes.UNIT, [new ProcessorTokens.RADAR(["$block$", "$target1$", "$target2$", "$target3$", "$order$", "$sort$", "$RETURN$"])]),
+            new fn("getlink", [
+                ["i", new ProcessorTypes.POSITIVE_INTEGER]
+            ], new ProcessorTypes.BUILDING, [new ProcessorTokens.GET_LINK(["$RETURN$", "$i$"])]),
         ]
     }
 
-    createConstants() {
+    static createConstants() {
+        if (MindustryCompiler.LOADED_ALL_DEFAULT_CONSTANTS) return
         // Basically same as https://github.com/Anuken/Mindustry/blob/master/core/src/mindustry/logic/GlobalVars.java
         var c = MindustryCompiler.DEFAULT_CONSTANTS = new Array(17) // Minimum of 17 items
         var co = MindustryCompiler.Constant
@@ -897,6 +987,7 @@ class MindustryCompiler extends Compiler {
                 ProcessorTypes["ALL_" + cname.toUpperCase() + "S"] = names
                 // console.groupEnd()
             }
+            MindustryCompiler.LOADED_ALL_DEFAULT_CONSTANTS = true
         }
         ////LOAD////
         //store base content
@@ -913,6 +1004,10 @@ class MindustryCompiler extends Compiler {
         for (var sensor of ProcessorTypes.ALL_SENSORS) c.push(new co("@" + sensor, new ProcessorTypes.ANY))
         //read logic ID mapping data (generated in ImagePacker)
         // MOVED UP
+        // additional I added
+        c.push(new co("@links", new ProcessorTypes.POSITIVE_INTEGER, 0))
+        // just to make sure
+        ProcessorTypes.reloadAll()
     }
 
     static {
@@ -926,15 +1021,24 @@ class MindustryCompiler extends Compiler {
             if (this.readyState !== XMLHttpRequest.DONE) return
             if (this.status !== 200) {
                 console.warn("Oh no:", this.status, this.statusText)
+                alert(`An HTTP error occurred while loading logic blocks: ${this.status} ${this.statusText}`)
                 return
             }
             MindustryCompiler.LogicIDsData = this.response
+            MindustryCompiler.createConstants()
             if (typeof window.highlighter !== "undefined") {
-                // Propagate the load event optimally
+                // Propagate the load event optimally to the editor
                 window.highlighter.onInput()
                 window.highlighter.onKeyUp()
             }
+            if (typeof window.init === "function") {
+                // Propagate the load event optimally to the docs
+                window.init()
+            }
         }).bind(http)
+        http.onerror = err => {
+            alert("An error occurred while loading logic blocks: ".concat(String(err)))
+        }
         http.send()
     }
 }

@@ -56,6 +56,39 @@ class ProcessorTypeValueRules {
             return `&gt;= 0`
         }
     }
+    static RADAR_TARGET = class extends ProcessorTypeValueRule {
+        isValid(value) {
+            return typeof value === "string" && [
+                "any",
+                "enemy",
+                "ally",
+                "player",
+                "attacker",
+                "flying",
+                "boss",
+                "ground"
+            ].includes(value)
+        }
+
+        toString() {
+            return `one of {any, enemy, ally, player, attacker, flying, boss, ground}`
+        }
+    }
+    static RADAR_SORT = class extends ProcessorTypeValueRule {
+        isValid(value) {
+            return typeof value === "string" && [
+                "distance",
+                "health",
+                "shield",
+                "armor",
+                "maxHealth"
+            ].includes(value)
+        }
+
+        toString() {
+            return `one of {distance, health, shield, armor, maxHealth}`
+        }
+    }
 }
 
 class ProcessorType {
@@ -210,6 +243,18 @@ class ProcessorTypes {
             new ProcessorTypeValueRules.POSITIVE()
         ]
     }
+    static RADAR_TARGET = class extends ProcessorType {
+        name = "radar target"
+        rules = [
+            new ProcessorTypeValueRules.RADAR_TARGET()
+        ]
+    }
+    static RADAR_SORT = class extends ProcessorType {
+        name = "radar sort"
+        rules = [
+            new ProcessorTypeValueRules.RADAR_SORT()
+        ]
+    }
     static CONTENT = class extends ProcessorType {
         name = "content"
         properties = new Map([
@@ -218,16 +263,16 @@ class ProcessorTypes {
         ])
     }
     static ITEM = class extends ProcessorTypes.CONTENT {
-        name = "content-item"
+        name = "content item"
     }
     static LIQUID = class extends ProcessorTypes.CONTENT {
-        name = "content-liquid"
+        name = "content liquid"
     }
     static BLOCK = class extends ProcessorTypes.CONTENT {
-        name = "content-block"
+        name = "content block"
     }
     static UNIT_TYPE = class extends ProcessorTypes.CONTENT {
-        name = "content-unit"
+        name = "content unit"
     }
     //Team.baseTeams
     static ALL_BASE_TEAMS = ["derelict", "sharded", "crux", "malis", "green", "blue"]
