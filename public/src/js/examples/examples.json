@@ -108,11 +108,6 @@
       "path": "debug/ast3.mppl",
       "name": "AST check 3",
       "description": "A third example for checking the correctness of the generated AST"
-    },
-    {
-      "path": "debug/bug1.mppl",
-      "name": "A bug",
-      "description": "A bug that should be fixed"
     }
   ]
 }

@@ -14,13 +14,11 @@ for (POSITIVE_INTEGER i = 0; i < @links; i = i + 1){
     if (type != @thorium-reactor) continue
 
     ## Then we read the important values
-    POSITIVE_INTEGER cryo = @cryofluid in reactor
-    POSITIVE_INTEGER heat = @heat in reactor
+    POSITIVE_INTEGER cryo = @cryofluid in reactor,
+                     heat = @heat in reactor
 
     ## Then we decide whether it should be enabled
-    BOOLEAN enableCryo = cryo > 10
-    BOOLEAN enableHeat = heat == 0
-    BOOLEAN enable = enableCryo and enableHeat
+    BOOLEAN enable = cryo > 10 and heat == 0
 
     ## Finally enable/disable it
     control.enabled(reactor, enable)

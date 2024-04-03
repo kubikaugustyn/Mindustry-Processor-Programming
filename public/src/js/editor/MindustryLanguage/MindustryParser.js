@@ -24,7 +24,7 @@ class MindustryParser extends Parser {
     static ERROR_EXPECTED_SEMICOLON = "Expected a semicolon separator"
     static ERROR_UNEXPECTED_KEYWORD = "Unexpected keyword (not implemented)"
     static ERROR_INVALID_IDENTIFIER = "Invalid identifier - cannot use a type or a keyword as an identifier"
-    static ERROR_INVALID_IDENTIFIER_PARAM = "Invalid identifier - cannot use a type or a keyword as an identifier. Maybe you wanted to separate a new argument type with a semicolon (;)?"
+    static ERROR_INVALID_IDENTIFIER_PARAM = "Invalid identifier - cannot use a type or a keyword as an identifier. Perhaps you wanted to separate a new argument type with a semicolon (;)?"
     static ERROR_INVALID_IDENTIFIER_KIND = "Invalid identifier - cannot use a property, constant or a link as an identifier"
     static ERROR_EXPECTED_SET = "Expected set (the = operator)"
     static ERROR_INVALID_OPERATOR_INPUTS = "Invalid operator input count (operator accepts a different amount of arguments than those provided)"
@@ -745,6 +745,8 @@ class MindustryParser extends Parser {
      */
     parseLexicalBinding(params) {
         // NUMBER <A = 9>, b = 5, c = 6
+        this.removeNewlineAndComments()
+
         var name = this.currentToken
         if (name.subtype) this.handleError(MindustryParser.ERROR_INVALID_IDENTIFIER_KIND, name)
         if (MindustryParser.KEYWORDS_LIST.includes(name.content) || ProcessorTypes.ALL_TYPES.includes(name.content))
