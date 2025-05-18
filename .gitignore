@@ -64,3 +64,4 @@ node_modules/
 
 # dotenv environment variables file
 .env
+/public/v2/src/js/codemirror-5.65.18/

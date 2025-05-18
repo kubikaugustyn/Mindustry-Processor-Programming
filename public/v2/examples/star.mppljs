@@ -1,0 +1,13 @@
+const RADIUS = 10
+const COUNT = 10
+const STEP = 360 / COUNT
+
+let angle = 0
+for (let i = 0; i < COUNT; i++) {
+    _ = unit.util.bind(@mono, i, null)
+    x = @thisx + math.cos(angle) * RADIUS
+    y = @thisy + math.sin(angle) * RADIUS
+    unit.control.move(x, y)
+
+    angle = angle + STEP
+}

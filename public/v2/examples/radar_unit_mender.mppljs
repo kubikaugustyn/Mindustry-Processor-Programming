@@ -1,0 +1,33 @@
+// Because of radar limitations, we cannot detect the unit when there are units with less health nearby
+const TYPE = @eclipse
+let SENSOR = hail1, LOG = message1
+
+unit = radar(SENSOR, ally, ally, ally, 0, health)
+
+if (unit != null && @health of unit < 0.3 * (@maxHealth of unit)) {
+    adopted = unit.util.adopt(TYPE, 0, unit)
+    println("Got unit: ", unit, ", adopted: ", adopted)
+    if (adopted) {
+        let oldX = @x of unit, oldY = @y of unit
+        outX, outY, found, building = unit.locate.building(repair, false)
+        println("Repair building @", outX, ",", outY, ", found: ", found)
+
+        if (found) {
+            println("Approaching the [green]mender[]...")
+            printFlush(LOG)
+            unit.control.approach(outX, outY, 4)
+            while (!unit.control.within(outX, outY, 5) && @dead of unit == false) {}
+            const full = 0.99 * (@maxHealth of unit)
+            while (@health of unit < full && @dead of unit == false) {}
+
+            println("Going back...")
+            printFlush(LOG)
+            unit.control.move(oldX, oldY)
+            while (!unit.control.within(oldX, oldY, 3) && @dead of unit == false) {}
+        } else printFlush(LOG)
+
+        unit.util.unbind(TYPE, 0, unit)
+        println("Done.")
+        printFlush(LOG)
+    } else printFlush(LOG)
+} else { print("[red]No unit to heal found.[]\n"); printFlush(LOG) }

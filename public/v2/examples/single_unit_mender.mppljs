@@ -1,0 +1,24 @@
+/*
+Binds a single unit, monitoring its health.
+If it goes below 30%, the unit will fly to the closest repair tower, repair, and return back.
+Binds a new unit if the current one unfortunately dies.
+*/
+const TYPE = @zenith
+
+unit = unit.util.bind(TYPE, 0, unit)
+if (unit != null) {
+    if (@health of unit < 0.3 * (@maxHealth of unit)) {
+        let oldX = @x of unit, oldY = @y of unit
+        outX, outY, found, building = unit.locate.building(repair, false)
+
+        if (found) {
+            unit.control.approach(outX, outY, 4)
+            while (!unit.control.within(outX, outY, 5) && @dead of unit == false) {}
+            const full = 0.99 * (@maxHealth of unit)
+            while (@health of unit < full && @dead of unit == false) {}
+
+            unit.control.move(oldX, oldY)
+            while (!unit.control.within(oldX, oldY, 3) && @dead of unit == false) {}
+        }
+    }
+}

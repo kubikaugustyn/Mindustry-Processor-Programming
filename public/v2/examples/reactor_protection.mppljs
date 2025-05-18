@@ -1,0 +1,36 @@
+/*
+Link this to a message (optional) and to multiple thorium reactors
+When the reactor reaches less than 10 cryofluid, it will be disabled.
+As you can see, complicated MLOG is simple with MPPL.
+Note that it can be further simplified, not creating so many variables,
+but I decided to create so many of them just to show the types.
+*/
+
+const hasMessage = message1 != null
+let reactorI = 1
+for (let i = 0; i < @links; i++){
+    // First we get the link and check if it's a reactor
+    const reactor = getlink(i)
+    const type = @type of reactor
+    if (type != @thorium-reactor) continue
+
+    // Then we read the important values
+    const cryo = @cryofluid in reactor,
+          heat = @heat in reactor
+
+    // Then we decide whether it should be enabled
+    const enable = cryo > 10 && heat == 0
+
+    // Finally enable/disable it
+    control.enabled(reactor, enable)
+
+    // Some printing to the message
+    if (hasMessage) {
+        print("Reactor #")
+        print(reactorI)
+        reactorI = reactorI + 1
+        if (enable) print(" [green]enabled[]\n")
+        else print(" [red]disabled[]\n")
+    }
+}
+if (hasMessage) printFlush(message1)

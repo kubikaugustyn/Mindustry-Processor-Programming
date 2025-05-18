@@ -1,0 +1,19 @@
+// Drawing 5x5 pixel squares to the large logic display with an arc
+const BLACK = packcolor(0, 0, 0, 255), WHITE = packcolor(255, 255, 255, 255)
+const DISPLAY_BLOCKS = 6, DISPLAY_PIXELS = 176
+const PIXELS_PER_BLOCK = DISPLAY_PIXELS / DISPLAY_BLOCKS
+let PEN = arc1, DISPLAY = display1, COLOR = switch1
+
+let color
+if (@enabled of COLOR) color = WHITE
+else color = BLACK
+draw.col(color)
+
+while (@shooting of PEN) {
+    const x = math.floor(((@shootX of PEN) - (@x of DISPLAY) + DISPLAY_BLOCKS / 2) * PIXELS_PER_BLOCK)
+    const y = math.floor(((@shootY of PEN) - (@y of DISPLAY) + DISPLAY_BLOCKS / 2) * PIXELS_PER_BLOCK)
+    if (x >= 0 && x < DISPLAY_PIXELS && y >= 0 && y < DISPLAY_PIXELS) {
+        draw.rect(x, y, 5, 5)
+		drawFlush(DISPLAY)
+    }
+}

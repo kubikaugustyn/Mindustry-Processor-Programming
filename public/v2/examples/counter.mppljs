@@ -1,0 +1,12 @@
+// Non-precise item counter
+const TYPE = @copper, SPEED = 4.2 // items/s
+const WAIT_TIME = 1 / SPEED
+let PROBE = conveyor1, STORAGE = cell1
+let total = 0
+
+while (true) {
+    const amount = TYPE in PROBE
+    if (amount > 0)
+        STORAGE[0] = total += 1
+    wait(WAIT_TIME)
+}

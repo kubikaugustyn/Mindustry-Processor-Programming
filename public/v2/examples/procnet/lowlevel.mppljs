@@ -1,0 +1,28 @@
+// Input: bind to a memory cell and 2 sorters
+item1 = @config of sorter1
+item2 = @config of sorter2
+if (item1 != old1) sent = procnet.lowlevel.sendPacket(cell1, 69, 42, 257, 1234, @id of item1)
+if (item2 != old2) sent = procnet.lowlevel.sendPacket(cell1, 69, 43, 257, 1234, @id of item2)
+old1 = item1
+old2 = item2
+
+// Logger: reads and prints the packet in slot 0 of cell1
+lockstate, id = procnet.lowlevel.getState(cell1, 0)
+println("Lock: ", lockstate, ", ID: ", id)
+if (lockstate == 2) {
+	word0, word1, word2 = procnet.lowlevel.readPacket(cell1, 0)
+	srcID, dstID, type, flags, payload = procnet.lowlevel.unpackPacket(word0, word1, word2)
+	println(srcID, " --> ", dstID, " - type: ", type, ", flags: ", flags, ", payload: ", payload)
+}
+printFlush(message1)
+
+// Simple router: relays traffic to one of the output nodes - bind cell1 to the cell of the input and to the cell2 and cell3 to the two outputs
+srcID, dstID, type, flags, payload = procnet.lowlevel.recvPacket(cell1)
+if (dstID == 42) procnet.lowlevel.sendPacket(cell2, srcID, dstID, type, flags, payload)
+else if (dstID == 43) procnet.lowlevel.sendPacket(cell3, srcID, dstID, type, flags, payload)
+
+// Output: bind to a cell and a sorter
+srcID, dstID, type, flags, payload = procnet.lowlevel.recvPacket(cell1)
+println(srcID, " --> ", dstID, " - type: ", type, ", flags: ", flags, ", payload: ", payload)
+printFlush(message1)
+control.config(sorter1, lookup.item(payload))

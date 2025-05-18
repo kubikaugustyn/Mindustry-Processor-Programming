@@ -1,0 +1,16 @@
+const RADIUS = 10
+
+let angle = 0, unit1 = null, unit2 = null
+while (true) {
+    unit1 = unit.util.bind(@flare, 0, unit1)
+    x = @thisx + math.cos(angle) * RADIUS
+    y = @thisy + math.sin(angle) * RADIUS
+    unit.control.move(x, y)
+
+    unit2 = unit.util.bind(@flare, 1, unit2)
+    x = @thisx + math.cos(angle + 180) * RADIUS
+    y = @thisy + math.sin(angle + 180) * RADIUS
+    unit.control.move(x, y)
+
+    angle = angle + 10
+}

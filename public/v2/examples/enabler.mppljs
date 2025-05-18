@@ -1,0 +1,8 @@
+let SWITCH = switch1
+
+const enable = @enabled of SWITCH
+for (let i = 0; i < @links; i++) {
+    building = getlink(i)
+    if (building != SWITCH)
+        control.enabled(building, enable)
+}

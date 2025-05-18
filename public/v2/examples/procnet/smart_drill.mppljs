@@ -1,0 +1,23 @@
+// Bind to a memory cell and two switches.
+// Enables the drill when one of the switches is pressed, and disables it when the other one is pressed.
+const DRILL = 50389 // Set it to your drill's ID
+let port = cell1, ON = switch1, OFF = switch2
+
+if (@enabled of ON) {
+    control.enabled(ON, false)
+    procnet.endDeviceSendPacket(port, DRILL, 42, 0, 0)
+}
+
+if (@enabled of OFF) {
+    control.enabled(OFF, false)
+    procnet.endDeviceSendPacket(port, DRILL, 69, 0, 0)
+}
+
+// Bind to a memory cell and a drill.
+// Enables the drill upon receiving a packet with a type 42, and disables it when it receives a type 69.
+let port = cell1, drill = drill1
+
+srcID, dstID, type, flags, payload = procnet.endDeviceRecvPacket(port)
+
+if (type == 42) control.enabled(drill, true)
+else if (type == 69) control.enabled(drill, false)

@@ -1,0 +1,108 @@
+const LOCKSTATE_READY = 0, LOCKSTATE_LOCKED = 1, LOCKSTATE_READ_READY = 2, LOCKSTATE_READING = 3;
+const ID = ((@thisx & 1023) << 10) | (@thisy & 1023), LOCKED_OURS = LOCKSTATE_LOCKED << 20 | ID, ID_MASK = (1 << 20) - 1;
+const PACKET_CAPACITY = 64 >> 2
+
+// LIB: lock(port, slot): locked
+slotBaseAddress = slot << 2
+while ((port[slotBaseAddress] >> 20) != LOCKSTATE_READY) {}
+port[slotBaseAddress] = LOCKED_OURS
+wait(0.05)
+__RETURN__ = port[slotBaseAddress] == LOCKED_OURS
+// end
+
+// LIB: getState(port, slot): lockstate, id
+slotValue = port[slot << 2]
+__RETURN_0__ = slotValue >> 20
+__RETURN_1__ = slotValue & ID_MASK
+// end
+
+// LIB: unsafeSetState(port, slot, lockstate, id)
+port[slot << 2] = lockstate << 20 | id
+// end
+
+// LIB: findSlotWithState(port, lockstate): slot
+// WARNING: The state may have changed at the time the value is returned!
+let i = 0
+while (true) {
+	for (i = 0; i < PACKET_CAPACITY; i++) {
+		slot_lockstate, _ = getState(port, i)
+		if (slot_lockstate == lockstate) break
+	}
+
+	slot_lockstate, _ = getState(port, i)
+	if (slot_lockstate == lockstate) break
+}
+__RETURN__ = i
+// end
+
+// LIB: findAnySlotWithState(lockstate): port, slot
+// WARNING: The state may have changed at the time the value is returned!
+// no code here (look into procnet.mjs)
+// end
+
+// LIB: packPacket(srcID, dstID, type, flags, payload): word0, word1, word2
+__RETURN_0__ = ((type  << 20) | dstID) & 0xFFFFFFFF
+__RETURN_1__ = ((flags << 20) | srcID) & 0xFFFFFFFF
+__RETURN_2__ = (payload              ) & 0xFFFFFFFF
+// end
+
+// LIB: unpackPacket(word0, word1, word2): srcID, dstID, type, flags, payload
+__RETURN_0__ = word1 & ID_MASK
+__RETURN_1__ = word0 & ID_MASK
+__RETURN_2__ = word0 >> 20
+__RETURN_3__ = word1 >> 20
+__RETURN_4__ = word2
+// end
+
+// LIB: unpackPacketDstID(word0, word1, word2): dstID
+__RETURN__ = word0 & ID_MASK
+// end
+
+// LIB: writePacket(port, slot, word0, word1, word2)
+slotBaseAddress = slot << 2
+port[slotBaseAddress + 1] = word0
+port[slotBaseAddress + 2] = word1
+port[slotBaseAddress + 3] = word2
+// end
+
+// LIB: sendPacket(port, srcID, dstID, type, flags, payload): sent
+word0, word1, word2 = packPacket(srcID, dstID, type, flags, payload)
+while (true) {
+	slot = findSlotWithState(port, LOCKSTATE_READY)
+	locked = lock(port, slot)
+	if (!locked) continue
+	writePacket(port, slot, word0, word1, word2)
+	unsafeSetState(port, slot, LOCKSTATE_READ_READY, ID)
+	break
+}
+__RETURN__ = true
+// end
+
+// LIB: recvPacket(port?): srcID, dstID, type, flags, payload
+while (true) {
+    if (port != null) slot = findSlotWithState(port, LOCKSTATE_READ_READY)
+    else port, slot = findAnySlotWithState(LOCKSTATE_READ_READY)
+
+    lockstate, id = procnet.lowlevel.getState(port, slot)
+    if (lockstate == 2) {
+	    unsafeSetState(port, slot, LOCKSTATE_READING, ID)
+        word0, word1, word2 = procnet.lowlevel.readPacket(port, slot)
+        __RETURN_0__, __RETURN_1__, __RETURN_2__, __RETURN_3__, __RETURN_4__ = procnet.lowlevel.unpackPacket(word0, word1, word2)
+	    unsafeSetState(port, slot, LOCKSTATE_READY, 0)
+        break
+    }
+}
+// end
+
+// locked = procnet.lowlevel.lock(port, slot)
+// lockstate, id = procnet.lowlevel.getState(port, slot)
+// procnet.lowlevel.unsafeSetState(port, slot, LOCKSTATE_READ_READY, ID)
+// slot = procnet.lowlevel.findSlotWithState(port, LOCKSTATE_READY)
+// port, slot = procnet.lowlevel.findAnySlotWithState(LOCKSTATE_READY)
+// word0, word1, word2 = procnet.lowlevel.packPacket(srcID, dstID, type, flags, payload)
+// srcID, dstID, type, flags, payload = procnet.lowlevel.unpackPacket(word0, word1, word2)
+// dstID = procnet.lowlevel.unpackPacketDstID(word0, word1, word2)
+// procnet.lowlevel.writePacket(port, slot, word0, word1, word2)
+// word0, word1, word2 = procnet.lowlevel.readPacket(port, slot)
+// sent = procnet.lowlevel.sendPacket(port, srcID, dstID, type, flags, payload)
+// srcID, dstID, type, flags, payload = procnet.lowlevel.recvPacket(port) // if port==null, it listens on all linked ports!

@@ -1,0 +1,40 @@
+// Item dashboard
+const WIDTH = 176, HEIGHT = 176
+let DISPLAY = display1
+
+if (core == null || @dead of core) {
+    for (let unitI = 0; unitI < @unitCount; unitI++) {
+        unit.bind(lookup.unit(unitI))
+        if (@unit != null) break
+    }
+    _, _, found, core = unit.locate.building(core, false)
+    unit.control.unbind()
+}
+
+if (core == null) {
+    draw.clear(255, 0, 0)
+    drawFlush(DISPLAY)
+}
+else {
+    draw.clear(0, 0, 0)
+
+    const itemHeight = math.floor(HEIGHT / @itemCount * 2), halfItemHeight = math.floor(itemHeight / 2)
+    const fullBarWidth = WIDTH / 2 - itemHeight
+    for (let i = 0; i < @itemCount; i++) {
+        const y = (i * itemHeight) % HEIGHT
+        const x = math.floor((i * itemHeight) / HEIGHT) * WIDTH / 2
+        const item = lookup.item(i)
+        const itemAmount = (item in core) / (@itemCapacity of core)
+
+        draw.color(255, 255, 255, 255)
+        draw.image(x + halfItemHeight, y + halfItemHeight, item, itemHeight, 0)
+
+        if (itemAmount > .1) draw.color(255, 255, 255, 255)
+        else draw.color(255, 0, 0, 255)
+        draw.rect(x + itemHeight, y, fullBarWidth, itemHeight)
+        draw.color(0, 255, 0, 255)
+        draw.rect(x + itemHeight, y, math.floor(fullBarWidth * itemAmount), itemHeight)
+    }
+
+    drawFlush(DISPLAY)
+}

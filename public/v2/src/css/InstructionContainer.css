@@ -1,0 +1,115 @@
+/*@import "https://fonts.googleapis.com/css?family=Varela Round";*/
+/*@import "https://fonts.googleapis.com/css?family=Fira Code";*/
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;800&display=swap');
+
+@font-face {
+    font-family: 'Mindustry';
+    src: /*url("https://github.com/Anuken/Mindustry/raw/refs/heads/master/core/assets/fonts/font.woff") format("woff"),*/ url("../font/Mindustry.woff") format("woff");
+}
+
+.instruction-container {
+    /*border: 1px solid black;*/
+    --scale: .5;
+}
+
+.instruction-container .instruction {
+    border: calc(10px * var(--scale)) solid var(--theme-color, black);
+    margin: calc(20px * var(--scale));
+    font-size: calc(var(--scale) * 30px);
+    /*font-family: "Varela Round";*/
+    /*font-family: "Fira Code", monospace;*/
+    font-family: "Mindustry", "JetBrains Mono", monospace;
+    font-style: normal;
+    font-weight: 400;
+}
+
+/* @formatter:off */
+.instruction-container .instruction.category-input_output  {--theme-color: rgb(160, 138, 138);}
+.instruction-container .instruction.category-block_control {--theme-color: rgb(212, 129, 107);}
+.instruction-container .instruction.category-operations    {--theme-color: rgb(135, 123, 173);}
+.instruction-container .instruction.category-flow_control  {--theme-color: rgb(107, 178, 178);}
+.instruction-container .instruction.category-unit_control  {--theme-color: rgb(199, 181, 157);}
+/* @formatter:on */
+
+.instruction-container .instruction .instruction-header {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: stretch;
+    align-content: space-between;
+
+    padding: calc(10px * var(--scale));
+    background-color: var(--theme-color, black);
+    color: var(--theme-color, white);
+    -webkit-text-stroke: calc(1px * var(--scale)) black;
+    font-weight: 800;
+}
+
+.instruction-container .instruction .instruction-header .instruction-header-name {
+}
+
+.instruction-container .instruction .instruction-header .instruction-header-index {
+}
+
+.instruction-container .instruction .instruction-content {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: baseline;
+    align-content: flex-start;
+    row-gap: 5px;
+    column-gap: calc(10px * var(--scale));
+
+    padding: calc(10px * var(--scale));
+    background-color: black;
+    color: white;
+}
+
+.instruction-container .instruction .instruction-content .instruction-content-text {
+}
+
+.instruction-container .instruction .instruction-content .instruction-content-input {
+    border-bottom: calc(7px * var(--scale)) solid var(--theme-color, black);
+    min-width: calc(250px * var(--scale));
+}
+
+.instruction-container .instruction .instruction-content .instruction-content-input:only-child {
+    min-width: 100%;
+    /* AND/OR */
+    flex-grow: 1;
+}
+
+.instruction-container .instruction .instruction-content .instruction-content-enum {
+    border-bottom: calc(7px * var(--scale)) solid var(--theme-color, black);
+    padding-right: calc(15px * var(--scale));
+    padding-left: calc(15px * var(--scale));
+    /*text-align: center;*/
+}
+
+.instruction-container .header {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    align-content: flex-start;
+
+    margin: 10px;
+}
+
+.instruction-container .header button {
+    height: 30px;
+}
+
+.instruction-container .raw-mlog ,
+.instruction-container .instructions {
+    margin-left: 10px;
+    margin-right: 10px;
+    width: calc(100% - 20px);
+    height: calc(100vh - 60px); /* 100% not work :D idk why I have to use 100vh, why doesn't 100% work with tall contents */
+    resize: none;
+    overflow-x: hidden;
+    overflow-y: scroll;
+}

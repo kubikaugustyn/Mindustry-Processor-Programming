@@ -1,0 +1,23 @@
+const HALF_WIDTH = 10, THRESHOLD = 1
+
+poly = unit.util.bind(@poly, 0, poly)
+
+x = @thisx - HALF_WIDTH
+y = @thisy - HALF_WIDTH
+unit.control.move(x, y)
+while (!unit.control.within(x, y, THRESHOLD)) {}
+
+x = @thisx + HALF_WIDTH
+y = @thisy - HALF_WIDTH
+unit.control.move(x, y)
+while (!unit.control.within(x, y, THRESHOLD)) {}
+
+x = @thisx + HALF_WIDTH
+y = @thisy + HALF_WIDTH
+unit.control.move(x, y)
+while (!unit.control.within(x, y, THRESHOLD)) {}
+
+x = @thisx - HALF_WIDTH
+y = @thisy + HALF_WIDTH
+unit.control.move(x, y)
+while (!unit.control.within(x, y, THRESHOLD)) {}
