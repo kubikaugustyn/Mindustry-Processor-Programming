@@ -103,7 +103,14 @@
     height: 30px;
 }
 
-.instruction-container .raw-mlog ,
+.instruction-container .header .spacer {
+    flex-grow: 1;
+}
+.instruction-container .header .settings-button {
+
+}
+
+.instruction-container .raw-mlog,
 .instruction-container .instructions {
     margin-left: 10px;
     margin-right: 10px;

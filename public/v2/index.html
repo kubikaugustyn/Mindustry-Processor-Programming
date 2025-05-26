@@ -3,8 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Mindustry Processor Programming</title>
+    <title>Mindustry Processor Programming v2</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;800&display=swap');
+
+        @font-face {
+            font-family: 'Mindustry';
+            src: /*url("https://github.com/Anuken/Mindustry/raw/refs/heads/master/core/assets/fonts/font.woff") format("woff"),*/ url("./src/font/Mindustry.woff") format("woff");
+        }
+
         body {
             width: fit-content;
             height: fit-content;
@@ -16,6 +23,10 @@
             text-align: center;
             background-color: black;
             color: white;
+
+            font-family: "Mindustry", "JetBrains Mono", monospace;
+            font-style: normal;
+            font-weight: 400;
         }
 
         img {
@@ -37,7 +48,7 @@
 
         a {
             /*text-decoration: none;*/
-            font-weight: bolder;
+            font-weight: 400;
             color: #aaa;
         }
 
@@ -53,16 +64,10 @@
 <body>
 <h1>Mindustry Processor Programming</h1>
 <p>Are you tired when making program with the basic commands in Mindustry processor?</p>
-<img id="hell" src="src/img/processorInHell.png" alt="Processor in hell">
-<h2>Yes? I have perfect <a id="link" href="editor">solution</a>!</h2>
-<img id="pain" src="src/img/processorPain.png" alt="Processor is pain"><br>
-<img id="easy" src="src/img/MPPLEasy.png" alt="MPPL is easy"><br>
-<a id="credits" href="credits">Credits</a> | <a id="docs" href="docs">Docs</a> | <a id="examples" href="examples">Examples</a> | <a id="v2" href="v2">Latest V2</a>
-
-<script>
-    if ((new URL(document.location.href)).searchParams.get("noRedirect") !== "true") {
-        document.getElementById("v2").click()
-    }
-</script>
+<img id="hell" src="../src/img/processorInHell.png" alt="Processor in hell">
+<h3>Yes? I have the perfect <a id="link" href="editor">solution</a>!</h3>
+<img id="pain" src="../src/img/processorPain.png" alt="Processor is pain"><br>
+<img id="easy" src="../src/img/MPPLEasy.png" alt="MPPL is easy"><br>
+<a id="credits" href="../credits">Credits</a> | <a id="docs" href="docs">Docs</a> | <a id="examples" href="examples">Examples</a> | <a id="v1" href="../?noRedirect=true">Archived V1</a>
 </body>
 </html>

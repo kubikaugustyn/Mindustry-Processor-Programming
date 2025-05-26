@@ -17,9 +17,10 @@ importCSS("../src/css/InstructionContainer.css")
  */
 export default class InstructionContainer extends Array {
     /**
-     * @param container {HTMLElement}
+     * @param container {HTMLElement} The HTML element to put the instructions and other elements into.
+     * @param openSettings {(function():void)|null} A function that should be called to open settings.
      */
-    constructor(container) {
+    constructor(container, openSettings = null) {
         super();
         this.container /** @type {HTMLElement} */ = container;
         this.container.classList.add("instruction-container");
@@ -60,11 +61,22 @@ export default class InstructionContainer extends Array {
         rawLabel.appendChild(rawOption)
         rawLabel.appendChild(new Text("Raw"))
 
+        const spacer = document.createElement("div")
+        spacer.classList.add("spacer")
+
+        const settingsButton = document.createElement("button")
+        settingsButton.classList.add("settings-button")
+        settingsButton.innerText = "Settings"
+        settingsButton.addEventListener("click", () => openSettings?.())
+
         this.header = document.createElement("div")
         this.header.classList.add("header");
         this.header.appendChild(copyToClipboard)
         this.header.appendChild(blocksLabel)
         this.header.appendChild(rawLabel)
+        this.header.appendChild(spacer)
+        if (openSettings !== null) this.header.appendChild(settingsButton)
+        else settingsButton.remove() // Delete the element. Not clean code, but whatever.
         this.container.appendChild(this.header)
 
         // Instructions

@@ -406,11 +406,11 @@ export class RadarInstruction extends Instruction {
 export class SensorInstruction extends Instruction {
     /**
      * @param variable {string}
-     * @param block {string}
+     * @param object {string}
      * @param property {string}
      */
-    constructor(variable, block, property) {
-        super(INSTRUCTION.SENSOR, [variable, block, property], CATEGORY.BLOCK_CONTROL);
+    constructor(variable, object, property) {
+        super(INSTRUCTION.SENSOR, [variable, object, property], CATEGORY.BLOCK_CONTROL);
     }
 
     /** @return {string} */

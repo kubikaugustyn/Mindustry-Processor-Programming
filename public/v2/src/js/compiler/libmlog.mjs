@@ -19,6 +19,7 @@ import libcontrol from "./libmlog-namespaces/control.mjs";
 import liblookup from "./libmlog-namespaces/lookup.mjs";
 import libunit from "./libmlog-namespaces/unit.mjs";
 import libprocnet from "./libmlog-namespaces/procnet.mjs";
+import libdatetime from "./libmlog-namespaces/datetime.mjs";
 
 /**
  * @readonly
@@ -32,6 +33,7 @@ const libmlog = Object.freeze(new Map(Object.entries({
     lookup: liblookup,
     unit: libunit,
     procnet: libprocnet,
+    datetime: libdatetime,
     // Functions
     read: new NativeFunction(["memory", "address"], false, (func, compiler, node, args, kwargs, returnManager) => {
         compiler.addInstruction(new ReadInstruction(returnManager.getReturn(), kwargs.get("memory").value, kwargs.get("address").value))

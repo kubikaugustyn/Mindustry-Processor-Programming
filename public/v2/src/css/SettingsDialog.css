@@ -1,0 +1,24 @@
+.settings-dialog {
+}
+
+.settings-dialog > form {
+}
+
+.settings-dialog > form > label {
+    display: block;
+    user-select: none;
+}
+
+.settings-dialog > form > menu {
+    padding: 0;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: flex-end;
+    align-items: center;
+    align-content: center;
+    gap: 10px;
+}
+
+.settings-dialog > form > menu > button {
+
+}

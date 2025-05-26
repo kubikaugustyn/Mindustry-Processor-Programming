@@ -6,7 +6,7 @@
 
 import * as acorn from "https://cdn.jsdelivr.net/npm/acorn@8.14.1/+esm"
 
-console.log("Acorn:", acorn)
+// console.log("Acorn:", acorn)
 
 /*const customOps = {
     _of: new acorn.TokenType('of', {binop: 7}), // 7 = precedence
@@ -20,7 +20,8 @@ function kw(name, options) {
 }
 
 const customTokenTypes = {
-    _of: kw("of", {beforeExpr: true, binop: 7}),
+    _of: kw("of", {beforeExpr: true, binop: 11}),
+    _in: kw("in", {beforeExpr: true, binop: 11}), // not custom, but overwrites the default precedence (7)
 }
 
 // Create your custom parser by extending Acorn's parser

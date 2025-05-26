@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Mindustry Processor Programming v2 - Documentation</title>
+
+    <script src="../src/js/docs.mjs" type="module"></script>
+</head>
+<body>
+<!--<div id="docs">
+    <h1>Contents</h1>
+    <ul id="contents"></ul>
+    <h1>Native library</h1>
+    <div>
+        <p>The language contains a native library, an abstraction from the raw instructions. Many functions are just
+            wrappers around instructions, but some implement a lot more functionality. Don't be scared, many functions
+            have a JITted implementation that uses a little weird syntax. It's here mostly for fun, to see how it works,
+            not for using it. :D You can just call the function and not care about the details, that's its purpose. Due
+            to the nature of these native functions, I cannot definitely determine the number of return variables
+            required, so it's about experimenting on your own. But it should be intuitive.</p>
+        <p>
+            You may have already noticed that I'm using the word function, even though it's actually a macro. Sorry for
+            any confusion caused. If you have an idea on how to implement a real function call, feel free to contact me.
+            I was thinking about using <a href="https://github.com/Anuken/Mindustry-Suggestions/issues/4468"
+                                          target="_blank">an eval instruction</a> to store the call stack, but Anuken
+            didn't implement it nor did he share his opinion about the subject.
+        </p>
+        <p>If you don't see a certain function, it may be because you're on a different version. Change it in settings
+            to see it:
+            <button id="open-settings">Open settings</button>
+        </p>
+        <div id="native-library"></div>
+    </div>
+</div>-->
+<div id="docs">
+    <nav>
+        <h1>Contents</h1>
+        <ul id="contents">
+            <li>Loading...</li>
+        </ul>
+    </nav>
+    <main>
+        <h1>Native library</h1>
+        <div>
+            <p>
+                This language includes a native library that wraps raw instructions into more convenient macros. Some
+                are
+                simple wrappers, others do much more. Advanced ones use a quirky JIT-style syntax—don't worry about it,
+                it's
+                mostly experimental. Just call the function and let it handle the details. Return values aren't always
+                obvious, so a bit of trial and error is expected.
+            </p>
+            <p>
+                Technically, these are macros, not real functions—sorry if that’s confusing.
+                I’ve considered implementing real function calls using
+                <a href="https://github.com/Anuken/Mindustry-Suggestions/issues/4468" target="_blank">an eval
+                    instruction</a>
+                for a call stack, but that’s still just an idea until it's supported by the game.
+            </p>
+            <p>
+                If a function seems missing, it might depend on your selected game version. You can switch versions
+                here:
+                <button id="open-settings">Open settings</button>
+            </p>
+            <div id="native-library">Rendering...</div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

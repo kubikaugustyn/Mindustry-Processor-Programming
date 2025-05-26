@@ -14,6 +14,7 @@ import {
 import DynamicLink from "../intructions/DynamicLink.mjs";
 import libmlog from "./libmlog.mjs";
 import {NativeFunction, NativeJITFunction} from "./NativeFunction.mjs";
+import {DEFAULT_SETTINGS} from "../intructions/SettingsDialog.mjs";
 
 /**
  * @enum {string}
@@ -29,6 +30,7 @@ const ErrorType = {
     FUNCTION_NOT_FOUND: "FUNCTION_NOT_FOUND",
     FUNCTION_ARGUMENTS_BAD: "FUNCTION_ARGUMENTS_BAD",
     FUNCTION_RETURN_BAD: "FUNCTION_RETURN_BAD",
+    FUNCTION_UNAVAILABLE: "FUNCTION_UNAVAILABLE", // Due to a failing access policy check
     NEVER: "NEVER"
 }
 export {ErrorType}
@@ -145,6 +147,8 @@ export class Compiler {
      * @type {TNativeNamespace}
      */
     defaultLibrary
+    /** @type {TSettings} */
+    settings
     /**
      * @type {boolean}
      * @description Whether the compilation should optimize constants by only calculating them only once. Only works for constants that are in the top level of the code, e.g., not inside a function, and not after any other statement than a constant declaration.
@@ -159,6 +163,7 @@ export class Compiler {
     /**
      * @param instructionContainer {InstructionContainer} The container to which the instructions should be added.
      * @param defaultLibrary {TNativeNamespace|null} Overwrites the default library if passed a non-null value.
+     * @param settings {TSettings|null} Overwrites the default settings if passed a non-null value.
      * @param optimiseConstants {boolean} Whether the compilation should optimize constants by only calculating them only once. Only works for constants that are in the top level of the code, e.g., not inside a function, and not after any other statement than a constant declaration.
      * @param trimJumpsToAfterLastInstruction {boolean} Whether the compilation should move the jumps that jump to after the last instruction to the beginning of the program.
      * @constructor
@@ -171,7 +176,7 @@ export class Compiler {
      * compiler.compile(ast)
      * // You now have the instructions in the container
      */
-    constructor(instructionContainer, defaultLibrary = null, optimiseConstants = true, trimJumpsToAfterLastInstruction = true) {
+    constructor(instructionContainer, defaultLibrary = null, settings = null, optimiseConstants = true, trimJumpsToAfterLastInstruction = true) {
         this.instructionContainer = instructionContainer
         this.targetVarName = null
         this.targetVarNames = []
@@ -182,6 +187,7 @@ export class Compiler {
         this.continueTarget = null
         this.continueTargets = []
         this.defaultLibrary = defaultLibrary ?? libmlog
+        this.settings = settings ?? DEFAULT_SETTINGS
         this.optimiseConstants = optimiseConstants
         this.trimJumpsToAfterLastInstruction = trimJumpsToAfterLastInstruction
     }

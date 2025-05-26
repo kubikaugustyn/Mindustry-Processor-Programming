@@ -12,10 +12,14 @@ import SplitView from "./SplitView.mjs"
 import {importCSS, stringHashCode} from "./utils.mjs";
 import compile from "./compiler/compile.mjs"
 import InstructionContainer from "./intructions/InstructionContainer.mjs";
+import SettingsDialog from "./intructions/SettingsDialog.mjs";
 
 importCSS("../src/js/codemirror-5.65.18/lib/codemirror.css")
 importCSS("../src/js/codemirror-5.65.18/addon/hint/show-hint.css")
 importCSS("../src/css/editor.css")
+
+/** @type {Readonly<string>} */
+const CODE_KEY = 'mindustry-processor-programming-v2-code'
 
 /** @type {SplitView|null} */
 let splitView = null
@@ -23,9 +27,11 @@ let splitView = null
 let editor = null
 /** @type {InstructionContainer|null} */
 let instructionContainer = null
+/** @type {SettingsDialog|null} */
+let settingsDialog = null
 
 /**
- * @type {{_lastCodeHash: number, readonly _compile: (function(string, InstructionContainer, function(): boolean): Promise<boolean>), _isCompiling: boolean, readonly finishedGracefully: boolean, _recompileAfterFinished: boolean, _finishedGracefully: boolean, _shouldCancel: boolean, scheduleCompile(): void, scheduleCancelCompile(): void}}
+ * @type {{_lastCodeHash: number, readonly _compile: (function(string, InstructionContainer, function(): boolean): Promise<boolean>), _isCompiling: boolean, readonly finishedGracefully: boolean, _recompileAfterFinished: boolean, _finishedGracefully: boolean, _shouldCancel: boolean, scheduleCompile(force?: boolean): void, scheduleCancelCompile(): void}}
  */
 const compileManager = {
     _lastCodeHash: 0,
@@ -34,7 +40,7 @@ const compileManager = {
     _isCompiling: false,
     _finishedGracefully: false,
 
-    scheduleCompile() {
+    scheduleCompile(force = false) {
         if (this._isCompiling) {
             this.scheduleCancelCompile()
             this._recompileAfterFinished = true
@@ -44,15 +50,15 @@ const compileManager = {
         /** @type {string} */
         const inputCode = editor.getValue()
         const codeHash = stringHashCode(inputCode)
-        if (codeHash === this._lastCodeHash) return
+        if (codeHash === this._lastCodeHash && !force) return
         this._lastCodeHash = codeHash
 
         this._isCompiling = true
         this._shouldCancel = false
         setTimeout(async () => {
             if (!this._shouldCancel) {
-                localStorage.setItem("tmp-name-stored-mind-proc-programming-v2-code", inputCode) // FIXME Tmp
-                this._finishedGracefully = await this._compile(inputCode, instructionContainer, () => this._shouldCancel)
+                if (inputCode !== exampleCode) localStorage.setItem(CODE_KEY, inputCode)
+                this._finishedGracefully = await this._compile(inputCode, instructionContainer, () => this._shouldCancel, settingsDialog.getSettings())
                 setTimeout(onCompiledCodeChange, 0)
             }
 
@@ -78,7 +84,41 @@ const compileManager = {
     }
 }
 
-const exampleCode = `// 
+const exampleCode = `/*
+Link this to a message (optional) and to multiple thorium reactors
+When the reactor reaches less than 10 cryofluid, it will be disabled.
+As you can see, complicated MLOG is simple with MPPL.
+Note that it can be further simplified, not creating so many variables.
+*/
+
+let hasMessage = message1 != null
+let reactorI = 1
+for (let i = 0; i < @links; i++){
+    // First we get the link and check if it's a reactor
+    const reactor = getlink(i)
+    const type = @type of reactor
+    if (type != @thorium-reactor) continue
+
+    // Then we read the important values
+    const cryo = @cryofluid in reactor,
+          heat = @heat in reactor
+
+    // Then we decide whether it should be enabled
+    const enable = cryo > 10 && heat == 0
+
+    // Finally enable/disable it
+    control.enabled(reactor, enable)
+
+    // Some printing to the message
+    if (hasMessage) {
+        print("Reactor #")
+        print(reactorI)
+        reactorI = reactorI + 1
+        if (enable) print(" [green]enabled[]\\n")
+        else print(" [red]disabled[]\\n")
+    }
+}
+if (hasMessage) printFlush(message1)
 `
 
 function onLoad() {
@@ -86,7 +126,7 @@ function onLoad() {
     splitView = new SplitView(root)
 
     editor = new CodeMirror(splitView.left, {
-        value: localStorage.getItem("tmp-name-stored-mind-proc-programming-v2-code") ?? exampleCode,
+        value: localStorage.getItem(CODE_KEY) ?? exampleCode,
         mode: 'javascript',
         theme: "default", // TODO Maybe use a custom/preset theme? "abcdef"?
         lineNumbers: true,
@@ -156,7 +196,9 @@ function onLoad() {
         compileManager.scheduleCancelCompile()
     });
 
-    instructionContainer = new InstructionContainer(splitView.right)
+    settingsDialog = new SettingsDialog(document.body)
+    settingsDialog.addEventListener("change", () => compileManager.scheduleCompile(true))
+    instructionContainer = new InstructionContainer(splitView.right, () => settingsDialog.open())
 
     onCompiledCodeChange()
     compileManager.scheduleCompile()

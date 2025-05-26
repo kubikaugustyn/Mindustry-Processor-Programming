@@ -9,7 +9,7 @@ import {NativeFunction} from "../NativeFunction.mjs";
 import {
     JumpInstruction,
     LookupInstruction,
-    OperationInstruction,
+    OperationInstruction, SensorInstruction,
     SetInstruction
 } from "../../intructions/instructions.mjs";
 import DynamicLink from "../../intructions/DynamicLink.mjs";
@@ -18,8 +18,8 @@ const generateLookupFunction = category => new NativeFunction(["index"], false, 
     compiler.addInstruction(new LookupInstruction(category, returnManager.getReturn(), kwargs.get("index").value))
 })
 const generateLookupReverseFunction = category => new NativeFunction(["item"], false, (func, compiler, node, args, kwargs, returnManager) => {
-    // TODO lookup.item(@id of @copper) = @copper - no loops required
-    const tmpItemVarName = compiler.tmpVarName(), indexVarName = returnManager.getReturn()
+    // OLD - used a loop
+    /*const tmpItemVarName = compiler.tmpVarName(), indexVarName = returnManager.getReturn()
     const afterLoop = new DynamicLink(), loopStart = new DynamicLink()
     compiler.addInstruction(new SetInstruction(indexVarName, "0"))
     loopStart.address = compiler.instructionContainer.length
@@ -28,7 +28,9 @@ const generateLookupReverseFunction = category => new NativeFunction(["item"], f
     compiler.addInstruction(new OperationInstruction("add", indexVarName, indexVarName, "1"))
     compiler.addInstruction(new JumpInstruction(loopStart, "lessThan", indexVarName, `@total${category[0].toUpperCase()}${category.slice(1)}s`))
     compiler.addInstruction(new SetInstruction(indexVarName, "-1"))
-    afterLoop.address = compiler.instructionContainer.length
+    afterLoop.address = compiler.instructionContainer.length*/
+    // lookup.item(@id of @copper) = @copper - no loops required
+    compiler.addInstruction(new SensorInstruction(returnManager.getReturn(), kwargs.get("item").value, "@id"))
 })
 
 /**

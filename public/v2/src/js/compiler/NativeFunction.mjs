@@ -78,13 +78,16 @@ export class NativeFunction {
     acceptInfiniteArgCount
     /** @type {TNativeFunctionCompileFn} */
     compileFn
+    /** @type {AccessPolicy[]} */
+    accessPolicies
 
     /**
      * @param args {string[]}
      * @param lastArgumentIsSpread {boolean}
      * @param compileFn {TNativeFunctionCompileFn}
+     * @param accessPolicies {AccessPolicy[]|null}
      */
-    constructor(args, lastArgumentIsSpread, compileFn) {
+    constructor(args, lastArgumentIsSpread, compileFn, accessPolicies = null) {
         this.arguments = args.map((name, i, args) => {
             return {
                 name,
@@ -94,6 +97,7 @@ export class NativeFunction {
         })
         this.acceptInfiniteArgCount = lastArgumentIsSpread
         this.compileFn = compileFn
+        this.accessPolicies = accessPolicies ?? []
     }
 
     /**
@@ -106,10 +110,13 @@ export class NativeFunction {
      * @return {NativeFunctionReturnManager} You can access the result of the "function call" through this object.
      */
     compile(compiler, node, argValues, returnVarNames) {
+        if (!this.accessPolicies.every(policy => policy.matches(compiler.settings)))
+            compiler.handleError(ErrorType.FUNCTION_UNAVAILABLE, node)
+
         if (this.acceptInfiniteArgCount ?
             argValues.length < this.arguments.length :
             argValues.length !== this.arguments.length)
-            compiler.handleError(ErrorType.FUNCTION_ARGUMENTS_BAD)
+            compiler.handleError(ErrorType.FUNCTION_ARGUMENTS_BAD, node)
         /** @type {TArgument[]} */
         const args = []
         /** @type {Map<string, TArgument>} */
@@ -138,12 +145,19 @@ export class NativeFunction {
 
 export class NativeJITFunction extends NativeFunction {
     /**
+     * @type {string}
+     * @private
+     */
+    _code
+
+    /**
      * @param args {string[]}
      * @param _ {null} Deprecated, no longer does anything. TODO Remove it completely.
      * @param code {string}
      * @param constants {ReadonlyMap<string, string>|null}
+     * @param accessPolicies {AccessPolicy[]|null}
      */
-    constructor(args, _, code, constants = null) {
+    constructor(args, _, code, constants = null, accessPolicies = null) {
         /** @type {TNativeFunctionCompileFn} */
         const compileFn = (func, compiler, node, args, kwargs, returnManager) => {
             let substitutedCode = code
@@ -177,7 +191,7 @@ export class NativeJITFunction extends NativeFunction {
 
             // Compile
             const instructions = new InstructionContainer(document.createElement("div"))
-            compile(substitutedCode, instructions, () => false, false, false)
+            compile(substitutedCode, instructions, () => false, compiler.settings, false, false)
 
             // Add the instructions to our "parent" compiler
             const jumpOffset = compiler.instructionContainer.length
@@ -198,6 +212,12 @@ export class NativeJITFunction extends NativeFunction {
             instructions.clear()
         }
 
-        super(args, false, compileFn);
+        super(args, false, compileFn, accessPolicies);
+
+        this._code = code
+    }
+
+    get code() {
+        return this._code
     }
 }

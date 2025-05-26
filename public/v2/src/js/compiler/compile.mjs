@@ -121,11 +121,12 @@ const EXAMPLE_INSTRUCTIONS = [
  * @param inputCode {string} The code to compile.
  * @param instructionContainer {InstructionContainer} The instruction container to put the resulting instructions into.
  * @param getShouldCancel {function(): boolean} Whether the compilation should be canceled.
+ * @param settings {TSettings|null} The compilation settings.
  * @param optimiseConstants {boolean} Whether the compilation should optimize constants by only calculating them only once. Only works for constants that are in the top level of the code, e.g., not inside a function, and not after any other statement than a constant declaration.
  * @param trimJumpsToAfterLastInstruction {boolean} Whether the compilation should move the jumps that jump to after the last instruction to the beginning of the program.
  * @return {Promise<boolean>}
  */
-export default async function compile(inputCode, instructionContainer, getShouldCancel, optimiseConstants = true, trimJumpsToAfterLastInstruction = true) {
+export default async function compile(inputCode, instructionContainer, getShouldCancel, settings = null, optimiseConstants = true, trimJumpsToAfterLastInstruction = true) {
     // Parse the code
     const parser = new Parser(inputCode)
     let ast
@@ -143,7 +144,7 @@ export default async function compile(inputCode, instructionContainer, getShould
     instructionContainer.clear()
 
     try {
-        const compiler = new Compiler(instructionContainer, null, optimiseConstants, trimJumpsToAfterLastInstruction)
+        const compiler = new Compiler(instructionContainer, null, settings, optimiseConstants, trimJumpsToAfterLastInstruction)
         compiler.compile(ast)
 
         return true
